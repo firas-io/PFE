@@ -6,10 +6,18 @@ const userSchema = new mongoose.Schema(
     prenom: { type: String, required: true },
     email: { type: String, required: true, unique: true },
     departement: { type: String },
-    role: { type: String, enum: ["utilisateur", "admin"], default: "utilisateur"},
+
+    // Référence dynamique au modèle Role
+    role: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      required: true
+    },
+
     mot_de_passe: { type: String, required: true },
     date_creation: { type: Date, default: Date.now },
-    dernier_login: { type: Date},
+    dernier_login: { type: Date },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

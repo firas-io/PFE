@@ -12,6 +12,7 @@ const sessionSchema = new mongoose.Schema(
 
     expiration: { type: Date, required: true },
   },
+  
   { timestamps: true }
 );
 

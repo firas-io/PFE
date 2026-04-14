@@ -2,6 +2,9 @@
 	"folders": [
 		{
 			"path": ".."
+		},
+		{
+			"path": "../../Desktop/2LIG/Habitflow-frontend"
 		}
 	],
 	"settings": {}

@@ -18,7 +18,24 @@ npm install
 ```
 
 ### Configuration
-Ensure MongoDB is running on `mongodb://127.0.0.1/habitflow`
+1. Copy the template:
+```bash
+cp .env.example .env
+```
+2. Adjust values if needed (`MONGO_URI`, `JWT_SECRET`, LDAP variables).
+3. For local backend + dockerized LDAP, keep `LDAP_URL=ldap://localhost:389`.
+4. For backend running inside docker-compose, use `LDAP_URL=ldap://openldap:389`.
+
+### Run with Docker (MongoDB + LDAP)
+```bash
+docker compose up -d --build
+```
+
+- API: `http://localhost:5000`
+- MongoDB: `mongodb://localhost:27017`
+- phpLDAPadmin: `http://localhost:8080`
+  - Login DN: `cn=admin,dc=habitflow,dc=local`
+  - Password: `admin`
 
 ### Running the Server
 
@@ -34,10 +51,68 @@ npm start
 
 The server will start on `http://localhost:3000`
 
+> Note: with docker-compose the API runs on `http://localhost:5000`
+
 ## API Endpoints
 
 ### Root Endpoint
 - `GET /` - Get API information and available endpoints
+
+### Authentication
+- `POST /register` - Local register (MongoDB)
+- `POST /login` - Local login (MongoDB)
+- `POST /login/ldap` - LDAP login (bind via OpenLDAP, then JWT)
+
+LDAP users seeded via `docker/ldap/50-seed.ldif`:
+- `admin@habitflow.local` (admin role)
+- `ali.ben@habitflow.local`
+- `sara.kim@habitflow.local`
+- `omar.said@habitflow.local`
+- `lina.martin@habitflow.local`
+- `yassine.rahim@habitflow.local`
+- `nora.haddad@habitflow.local`
+- `karim.amine@habitflow.local`
+- `maya.zidane@habitflow.local`
+- `adam.faris@habitflow.local`
+
+Passwords:
+- `admin@habitflow.local` → `Admin123!`
+- other seeded LDAP users → `Test123!`
+
+### Quick LDAP Validation
+1. Start the stack:
+```bash
+docker compose up -d --build
+```
+2. Check services are healthy:
+```bash
+docker compose ps
+```
+Expected services: `backend`, `mongo`, `openldap`, `phpldapadmin` in `Up` state.
+
+3. Test a valid LDAP login:
+```bash
+curl -X POST http://localhost:5000/login/ldap \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"admin@habitflow.local\",\"mot_de_passe\":\"Admin123!\"}"
+```
+Expected result: `200` with a JWT token and admin role.
+
+4. Test a regular LDAP user login:
+```bash
+curl -X POST http://localhost:5000/login/ldap \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"ali.ben@habitflow.local\",\"mot_de_passe\":\"Test123!\"}"
+```
+Expected result: `200` with a JWT token.
+
+5. Test an invalid LDAP login:
+```bash
+curl -X POST http://localhost:5000/login/ldap \
+  -H "Content-Type: application/json" \
+  -d "{\"email\":\"ali.ben@habitflow.local\",\"mot_de_passe\":\"WrongPass!\"}"
+```
+Expected result: authentication error (`401`).
 
 ### Users
 - `POST /users` - Create a new user (201)

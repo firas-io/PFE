@@ -18,4 +18,3 @@ exports.updateStats = async (req, reply) => {
 exports.deleteStats = async (req, reply) => {
   await HabitStats.findByIdAndDelete(req.params.id);
   reply.send({ message: "Stats deleted" });
-};

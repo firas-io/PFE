@@ -1,10 +1,10 @@
-const controller = require("../controllers/authController");
+const controller = require("../controllers/authentificationControllers");
 
 async function routes(fastify) {
 
   fastify.post("/register", controller.register);
-
   fastify.post("/login", controller.login);
+  fastify.post("/login/ldap", controller.loginLdap);
 
   // Exemple route protégée
   fastify.get("/profile", {

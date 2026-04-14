@@ -2,71 +2,82 @@ const Onboarding = require("../models/Onboarding");
 
 async function routes(fastify) {
 
-  fastify.post("/onboarding", async (req, reply) => {
+  // POST /onboarding — Authentifié (Propriétaire)
+  fastify.post("/onboarding", {
+    preHandler: [fastify.authenticate]
+  }, async (req, reply) => {
     try {
-      const onboarding = await Onboarding.create(req.body);
+      const onboardingData = { ...req.body, utilisateur_id: req.user.id };
+      const onboarding = await Onboarding.create(onboardingData);
       reply.code(201);
       return onboarding;
-    } catch(err) {
+    } catch (err) {
       reply.code(400);
       return { error: err.message };
     }
   });
 
-  fastify.get("/onboarding", async (req, reply) => {
+  // GET /onboarding — RÉSERVÉ AUX ADMINS (Permission: ONBOARDING_VIEW)
+  fastify.get("/onboarding", {
+    preHandler: [fastify.authenticate, fastify.authorize(["ONBOARDING_VIEW"])]
+  }, async (req, reply) => {
     try {
-      const allOnboarding = await Onboarding.find().populate("utilisateur_id");
+      const allOnboarding = await Onboarding.find().populate("utilisateur_id", "-mot_de_passe");
       return allOnboarding;
-    } catch(err) {
+    } catch (err) {
       reply.code(500);
       return { error: err.message };
     }
   });
 
-  fastify.get("/onboarding/:id", async (req, reply) => {
+  // GET /onboarding/:id — Propriétaire ou Admin
+  fastify.get("/onboarding/:id", {
+    preHandler: [fastify.authenticate]
+  }, async (req, reply) => {
     try {
-      const onboarding = await Onboarding.findById(req.params.id).populate("utilisateur_id");
+      const onboarding = await Onboarding.findById(req.params.id).populate("utilisateur_id", "-mot_de_passe");
       if (!onboarding) {
         reply.code(404);
         return { error: "Onboarding not found" };
       }
+
+      const isAdmin = req.user.permissions.includes("ONBOARDING_VIEW") || req.user.permissions.includes("ALL");
+      if (onboarding.utilisateur_id._id.toString() !== req.user.id && !isAdmin) {
+        reply.code(403);
+        return { error: "Accès refusé" };
+      }
+
       return onboarding;
-    } catch(err) {
+    } catch (err) {
       reply.code(500);
       return { error: err.message };
     }
   });
 
-  fastify.put("/onboarding/:id", async (req, reply) => {
+  // PUT /onboarding/:id — Propriétaire ou Admin
+  fastify.put("/onboarding/:id", {
+    preHandler: [fastify.authenticate]
+  }, async (req, reply) => {
     try {
-      const onboarding = await Onboarding.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      const onboarding = await Onboarding.findById(req.params.id);
       if (!onboarding) {
         reply.code(404);
         return { error: "Onboarding not found" };
       }
-      return onboarding;
-    } catch(err) {
+
+      const isAdmin = req.user.permissions.includes("ONBOARDING_MANAGE") || req.user.permissions.includes("ALL");
+      if (onboarding.utilisateur_id.toString() !== req.user.id && !isAdmin) {
+        reply.code(403);
+        return { error: "Accès refusé" };
+      }
+
+      const updatedOnboarding = await Onboarding.findByIdAndUpdate(req.params.id, req.body, { new: true });
+      return updatedOnboarding;
+    } catch (err) {
       reply.code(400);
       return { error: err.message };
     }
   });
-
-  fastify.delete("/onboarding/:id", async (req, reply) => {
-    try {
-      const onboarding = await Onboarding.findByIdAndDelete(req.params.id);
-      if (!onboarding) {
-        reply.code(404);
-        return { error: "Onboarding not found" };
-      }
-      reply.code(204);
-      return null;
-    } catch(err) {
-      reply.code(500);
-      return { error: err.message };
-    }
-  });
-
 }
 
 module.exports = routes;
-

@@ -1,0 +1,89 @@
+name: habitflow-backend
+services:
+  backend:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - MONGO_URI=mongodb://mongo:27017/habitflow
+      - JWT_SECRET=votre_secret_jwt_tres_securise
+      - ADMIN_EMAIL=admin@habitflow.com
+      - ADMIN_PASSWORD=Admin123!
+      - LDAP_ENABLED=true
+      - LDAP_URL=ldap://openldap:389
+      - LDAP_BASE_DN=ou=people,dc=habitflow,dc=local
+      - LDAP_BIND_DN=cn=admin,dc=habitflow,dc=local
+      - LDAP_BIND_PASSWORD=admin
+      - LDAP_USER_FILTER=(mail={{username}})
+    depends_on:
+      mongo:
+        condition: service_started
+      openldap:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - habitflow-data:/data/db
+
+  openldap:
+    image: osixia/openldap:1.5.0
+    command: ["--copy-service"]
+    environment:
+      - LDAP_ORGANISATION=HabitFlow
+      - LDAP_DOMAIN=habitflow.local
+      - LDAP_ADMIN_PASSWORD=admin
+      - LDAP_REMOVE_CONFIG_AFTER_SETUP=false
+    ports:
+      - "389:389"
+      - "636:636"
+    volumes:
+      - ldap-data:/var/lib/ldap
+      - ldap-config:/etc/ldap/slapd.d
+      - ./docker/ldap:/container/service/slapd/assets/config/bootstrap/ldif/custom
+    healthcheck:
+      test: ["CMD-SHELL", "ldapsearch -x -H ldap://localhost:389 -D 'cn=admin,dc=habitflow,dc=local' -w 'admin' -b 'dc=habitflow,dc=local' -s base '(objectClass=*)' >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  phpldapadmin:
+    image: osixia/phpldapadmin:0.9.0
+    environment:
+      - PHPLDAPADMIN_LDAP_HOSTS=openldap
+      - PHPLDAPADMIN_HTTPS=false
+    ports:
+      - "8080:80"
+    depends_on:
+      openldap:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ldap-seed:
+    image: osixia/openldap:1.5.0
+    depends_on:
+      openldap:
+        condition: service_healthy
+    volumes:
+      - ./docker/ldap/50-seed.ldif:/seed/50-seed.ldif:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      "ldapadd -x -H ldap://openldap:389
+      -D 'cn=admin,dc=habitflow,dc=local'
+      -w 'admin'
+      -f /seed/50-seed.ldif
+      -c || true"
+    restart: "no"
+
+volumes:
+  habitflow-data:
+  ldap-data:
+  ldap-config:

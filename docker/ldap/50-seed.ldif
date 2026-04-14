@@ -1,0 +1,123 @@
+dn: ou=people,dc=habitflow,dc=local
+objectClass: organizationalUnit
+ou: people
+
+dn: uid=admin,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Admin System
+sn: System
+givenName: Admin
+uid: admin
+mail: admin@habitflow.local
+userPassword: Admin123!
+
+dn: uid=ali.ben,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Ali Ben
+sn: Ben
+givenName: Ali
+uid: ali.ben
+mail: ali.ben@habitflow.local
+userPassword: Test123!
+
+dn: uid=sara.kim,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Sara Kim
+sn: Kim
+givenName: Sara
+uid: sara.kim
+mail: sara.kim@habitflow.local
+userPassword: Test123!
+
+dn: uid=omar.said,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Omar Said
+sn: Said
+givenName: Omar
+uid: omar.said
+mail: omar.said@habitflow.local
+userPassword: Test123!
+
+dn: uid=lina.martin,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Lina Martin
+sn: Martin
+givenName: Lina
+uid: lina.martin
+mail: lina.martin@habitflow.local
+userPassword: Test123!
+
+dn: uid=yassine.rahim,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Yassine Rahim
+sn: Rahim
+givenName: Yassine
+uid: yassine.rahim
+mail: yassine.rahim@habitflow.local
+userPassword: Test123!
+
+dn: uid=nora.haddad,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Nora Haddad
+sn: Haddad
+givenName: Nora
+uid: nora.haddad
+mail: nora.haddad@habitflow.local
+userPassword: Test123!
+
+dn: uid=karim.amine,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Karim Amine
+sn: Amine
+givenName: Karim
+uid: karim.amine
+mail: karim.amine@habitflow.local
+userPassword: Test123!
+
+dn: uid=maya.zidane,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Maya Zidane
+sn: Zidane
+givenName: Maya
+uid: maya.zidane
+mail: maya.zidane@habitflow.local
+userPassword: Test123!
+
+dn: uid=adam.faris,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Adam Faris
+sn: Faris
+givenName: Adam
+uid: adam.faris
+mail: adam.faris@habitflow.local
+userPassword: Test123!
