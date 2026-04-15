@@ -1,0 +1,18 @@
+# Root-level ignores
+.DS_Store
+Thumbs.db
+
+# Backend
+backend/.env
+backend/node_modules/
+backend/*.log
+
+# Frontend
+frontend/.env.local
+frontend/.env*.local
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Docker
+docker-volume/

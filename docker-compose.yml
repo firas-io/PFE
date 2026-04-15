@@ -1,7 +1,18 @@
 name: habitflow-backend
 services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
   backend:
-    build: .
+    build: ./backend
     ports:
       - "5000:5000"
     environment:
@@ -16,14 +27,24 @@ services:
       - LDAP_BIND_DN=cn=admin,dc=habitflow,dc=local
       - LDAP_BIND_PASSWORD=admin
       - LDAP_USER_FILTER=(mail={{username}})
+      - LDAP_USER_DN_TEMPLATE=uid={{uid}},ou=people,dc=habitflow,dc=local
+      - LDAP_ADMIN_EMAIL=admin@habitflow.local
     depends_on:
       mongo:
-        condition: service_started
+        condition: service_healthy
       openldap:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:5000', r => process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
     volumes:
-      - .:/app
+      - ./backend:/app
       - /app/node_modules
+
 
   mongo:
     image: mongo:latest
@@ -31,6 +52,12 @@ services:
       - "27017:27017"
     volumes:
       - habitflow-data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   openldap:
     image: osixia/openldap:1.5.0

@@ -1,297 +1,204 @@
-# HabitFlow Backend API
+# HabitFlow
 
-## Overview
-HabitFlow is a habit tracking application backend built with Fastify and MongoDB. It provides a complete RESTful API for managing user habits, tracking progress, and monitoring habit statistics.
+A full-stack habit-tracking application built with **Next.js** (frontend) and **Fastify + MongoDB** (backend), featuring RBAC, LDAP authentication, and a full admin dashboard.
+
+---
+
+## Project Structure
+
+```
+habitflow-backend/
+├── backend/                  # Fastify REST API (Node.js)
+│   ├── server.js             # Entry point
+│   ├── package.json
+│   ├── Dockerfile
+│   ├── .env.example
+│   ├── scripts/              # One-off admin utilities
+│   └── src/
+│       ├── config/           # Database & LDAP connection
+│       ├── middlewares/      # JWT auth + RBAC decorators
+│       ├── models/           # 10 Mongoose schemas
+│       ├── controllers/      # Business logic (11 controllers)
+│       ├── routes/           # Thin API route wiring (11 files)
+│       └── utils/            # Normalization helpers & seed scripts
+│
+├── frontend/                 # Next.js 14 App Router
+│   ├── app/                  # Pages (admin dashboard, dashboard, login, signup)
+│   ├── components/           # Shared React components
+│   ├── lib/                  # Backward-compat re-exports
+│   └── src/
+│       ├── services/         # API fetch wrapper & auth token helpers
+│       └── types/            # TypeScript interfaces
+│
+├── docker/                   # LDAP seed files
+├── docker-compose.yml        # MongoDB + OpenLDAP + phpLDAPadmin + backend
+└── README.md
+```
+
+---
 
 ## Technology Stack
-- **Runtime**: Node.js
-- **Framework**: Fastify 5.7.4
-- **Database**: MongoDB 9.2.1
-- **Database Driver**: Mongoose
-- **Development**: Nodemon
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js 14, TypeScript, Tabler Icons |
+| Backend | Fastify 5, Node.js 20 |
+| Database | MongoDB (Mongoose) |
+| Auth | JWT (`@fastify/jwt`) + RBAC permissions |
+| LDAP | OpenLDAP via `ldapjs` |
+| DevOps | Docker, docker-compose |
+
+---
 
 ## Getting Started
 
-### Installation
+### Option 1 — Docker (full stack)
+
 ```bash
+docker-compose up -d --build
+```
+
+| Service | URL |
+|---|---|
+| Backend API | http://localhost:5000 |
+| Frontend | http://localhost:3000 (run separately) |
+| MongoDB | mongodb://localhost:27017 |
+| phpLDAPadmin | http://localhost:8080 |
+
+LDAP admin: `cn=admin,dc=habitflow,dc=local` / `admin`
+
+---
+
+### Option 2 — Local Development
+
+**Backend:**
+```bash
+cd backend
+cp .env.example .env        # configure MONGO_URI, JWT_SECRET, etc.
 npm install
+npm run dev                 # starts on port 5000 with nodemon
 ```
 
-### Configuration
-1. Copy the template:
+**Frontend:**
 ```bash
-cp .env.example .env
+cd frontend
+npm install
+npm run dev                 # starts on port 3000
 ```
-2. Adjust values if needed (`MONGO_URI`, `JWT_SECRET`, LDAP variables).
-3. For local backend + dockerized LDAP, keep `LDAP_URL=ldap://localhost:389`.
-4. For backend running inside docker-compose, use `LDAP_URL=ldap://openldap:389`.
 
-### Run with Docker (MongoDB + LDAP)
+---
+
+## Authentication
+
+### Local (MongoDB)
 ```bash
-docker compose up -d --build
+POST /register   { nom, prenom, email, mot_de_passe }
+POST /login      { email, mot_de_passe }
 ```
 
-- API: `http://localhost:5000`
-- MongoDB: `mongodb://localhost:27017`
-- phpLDAPadmin: `http://localhost:8080`
-  - Login DN: `cn=admin,dc=habitflow,dc=local`
-  - Password: `admin`
-
-### Running the Server
-
-**Development mode (with auto-reload):**
+### LDAP
 ```bash
-npm run dev
+POST /login/ldap { email, mot_de_passe }
 ```
 
-**Production mode:**
-```bash
-npm start
-```
+**Seeded LDAP users** (password: `Test123!`):
+- `admin@habitflow.local` → `Admin123!` (admin role)
+- `ali.ben@habitflow.local`, `sara.kim@habitflow.local`, `omar.said@habitflow.local`
+- `lina.martin@habitflow.local`, `yassine.rahim@habitflow.local`, `nora.haddad@habitflow.local`
+- `karim.amine@habitflow.local`, `maya.zidane@habitflow.local`, `adam.faris@habitflow.local`
 
-The server will start on `http://localhost:3000`
+---
 
-> Note: with docker-compose the API runs on `http://localhost:5000`
+## API Reference
 
-## API Endpoints
+All endpoints require a `Bearer <token>` header unless noted as public.
 
-### Root Endpoint
-- `GET /` - Get API information and available endpoints
-
-### Authentication
-- `POST /register` - Local register (MongoDB)
-- `POST /login` - Local login (MongoDB)
-- `POST /login/ldap` - LDAP login (bind via OpenLDAP, then JWT)
-
-LDAP users seeded via `docker/ldap/50-seed.ldif`:
-- `admin@habitflow.local` (admin role)
-- `ali.ben@habitflow.local`
-- `sara.kim@habitflow.local`
-- `omar.said@habitflow.local`
-- `lina.martin@habitflow.local`
-- `yassine.rahim@habitflow.local`
-- `nora.haddad@habitflow.local`
-- `karim.amine@habitflow.local`
-- `maya.zidane@habitflow.local`
-- `adam.faris@habitflow.local`
-
-Passwords:
-- `admin@habitflow.local` → `Admin123!`
-- other seeded LDAP users → `Test123!`
-
-### Quick LDAP Validation
-1. Start the stack:
-```bash
-docker compose up -d --build
-```
-2. Check services are healthy:
-```bash
-docker compose ps
-```
-Expected services: `backend`, `mongo`, `openldap`, `phpldapadmin` in `Up` state.
-
-3. Test a valid LDAP login:
-```bash
-curl -X POST http://localhost:5000/login/ldap \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"admin@habitflow.local\",\"mot_de_passe\":\"Admin123!\"}"
-```
-Expected result: `200` with a JWT token and admin role.
-
-4. Test a regular LDAP user login:
-```bash
-curl -X POST http://localhost:5000/login/ldap \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"ali.ben@habitflow.local\",\"mot_de_passe\":\"Test123!\"}"
-```
-Expected result: `200` with a JWT token.
-
-5. Test an invalid LDAP login:
-```bash
-curl -X POST http://localhost:5000/login/ldap \
-  -H "Content-Type: application/json" \
-  -d "{\"email\":\"ali.ben@habitflow.local\",\"mot_de_passe\":\"WrongPass!\"}"
-```
-Expected result: authentication error (`401`).
+### Auth
+| Method | Path | Access |
+|---|---|---|
+| POST | `/register` | Public |
+| POST | `/login` | Public |
+| POST | `/login/ldap` | Public |
+| GET | `/profile` | Authenticated |
 
 ### Users
-- `POST /users` - Create a new user (201)
-- `GET /users` - Get all users (200)
-- `GET /users/:id` - Get a specific user (200/404)
-- `PUT /users/:id` - Update a user (200/404/400)
-- `DELETE /users/:id` - Delete a user (204/404)
+| Method | Path | Permission |
+|---|---|---|
+| POST | `/users` | Public (auto role: utilisateur) |
+| GET | `/users` | USERS_VIEW |
+| GET | `/users/:id` | Owner or USERS_VIEW |
+| PATCH | `/users/:id` | Owner or USERS_MANAGE |
+| PATCH | `/users/:id/role` | USERS_MANAGE |
+| PATCH | `/users/:id/status` | USERS_MANAGE |
+| DELETE | `/users/:id` | Owner or USERS_MANAGE |
+| POST | `/users/admin` | USERS_MANAGE |
 
 ### Habits
-- `POST /habits` - Create a new habit (201)
-- `GET /habits` - Get all habits (200)
-- `GET /habits/:id` - Get a specific habit (200/404)
-- `PUT /habits/:id` - Update a habit (200/404/400)
-- `DELETE /habits/:id` - Delete a habit (204/404)
+| Method | Path | Permission |
+|---|---|---|
+| POST | `/habits` | Authenticated |
+| GET | `/habits` | HABITS_VIEW (admin) |
+| GET | `/habits/my` | Authenticated (own + shared) |
+| GET | `/habits/:id` | Owner or HABITS_VIEW |
+| PUT | `/habits/:id` | Owner or HABITS_MANAGE |
+| PATCH | `/habits/:id/status` | Owner or HABITS_MANAGE |
+| PATCH | `/habits/:id/notes` | Owner or shared |
+| GET | `/habits/:id/notes/history` | Owner or HABITS_MANAGE |
+| POST | `/habits/:id/clone` | Owner or shared |
+| DELETE | `/habits/:id` | Owner (soft archive) |
+| DELETE | `/habits/:id/hard` | Owner (hard delete) |
+| GET | `/habits/templates` | Authenticated |
+| POST | `/habits/from-template/:id` | Authenticated |
 
-### Habit Logs
-- `POST /logs` - Create a habit log entry (201)
-- `GET /logs` - Get all habit logs (200)
-- `GET /logs/:id` - Get a specific log (200/404)
-- `PUT /logs/:id` - Update a log entry (200/404/400)
-- `DELETE /logs/:id` - Delete a log entry (204/404)
+### Logs
+| Method | Path | Permission |
+|---|---|---|
+| POST | `/logs` | Owner or shared habit |
+| GET | `/logs` | LOGS_VIEW (admin) |
+| GET | `/logs/:id` | Owner or LOGS_VIEW |
+| PUT | `/logs/:id` | Owner or LOGS_MANAGE |
+| DELETE | `/logs/:id` | Owner or LOGS_MANAGE |
+| POST | `/logs/catchup` | Owner (photo proof) |
+| GET | `/logs/incomplete-for-date/:date` | Authenticated |
 
-### Habit Stats
-- `POST /stats` - Create habit statistics (201)
-- `GET /stats` - Get all statistics (200)
-- `GET /stats/:id` - Get specific statistics (200/404)
-- `PUT /stats/:id` - Update statistics (200/404/400)
-- `DELETE /stats/:id` - Delete statistics (204/404)
+### Progress
+| Method | Path | Description |
+|---|---|---|
+| GET | `/progress/my` | Full stats summary |
+| GET | `/progress/today` | Today's habits + logs |
+| GET | `/progress/calendar` | Monthly calendar view |
 
-### Reminders
-- `POST /reminders` - Create a reminder (201)
-- `GET /reminders` - Get all reminders (200)
-- `GET /reminders/:id` - Get a specific reminder (200/404)
-- `PUT /reminders/:id` - Update a reminder (200/404/400)
-- `DELETE /reminders/:id` - Delete a reminder (204/404)
+### Other Endpoints
+- `GET/POST /stats` — Habit statistics (admin)
+- `GET/POST/DELETE /reminders` — Reminders
+- `GET/POST/DELETE /sessions` — Sessions
+- `GET/POST/PUT /onboarding` — Onboarding
+- `GET/POST/PUT/DELETE /roles` — Role management (admin)
 
-### Sessions
-- `POST /sessions` - Create a session (201)
-- `GET /sessions` - Get all sessions (200)
-- `GET /sessions/:id` - Get a specific session (200/404)
-- `DELETE /sessions/:id` - Delete a session (204/404)
+---
 
-### Onboarding
-- `POST /onboarding` - Create onboarding record (201)
-- `GET /onboarding` - Get all onboarding records (200)
-- `GET /onboarding/:id` - Get specific onboarding (200/404)
-- `PUT /onboarding/:id` - Update onboarding (200/404/400)
-- `DELETE /onboarding/:id` - Delete onboarding (204/404)
+## RBAC — Permission System
 
-## Data Models
+| Permission | Grants Access To |
+|---|---|
+| `ALL` | Everything (admin role) |
+| `USERS_VIEW` / `USERS_MANAGE` | User management |
+| `HABITS_VIEW` / `HABITS_MANAGE` | Habit administration |
+| `LOGS_VIEW` / `LOGS_MANAGE` | Log administration |
+| `ROLES_VIEW` / `ROLES_MANAGE` | Role management |
+| `SELF_VIEW` / `SELF_EDIT` | Own profile only |
 
-### User
-```javascript
-{
-  nom: String (required),
-  prenom: String (required),
-  email: String (required, unique),
-  departement: String,
-  role: String (enum: ["utilisateur", "admin"], default: "utilisateur"),
-  mot_de_passe: String (required),
-  date_creation: Date (default: Date.now),
-  dernier_login: Date
-}
-```
+---
 
-### Habit
-```javascript
-{
-  utilisateur_id: ObjectId (ref: User, required),
-  nom: String (required),
-  description: String,
-  categorie: String,
-  frequence: String (enum: ["daily", "weekly", "monthly"]),
-  date_creation: Date (default: Date.now)
-}
-```
+## Adding a New Feature
 
-### HabitLog
-```javascript
-{
-  habit_id: ObjectId (ref: Habit, required),
-  date: Date (required),
-  statut: String (enum: ["completee", "non_completee", "partielle"], required),
-  notes: String
-}
-```
+1. **Model** → `backend/src/models/MyFeature.js`
+2. **Controller** → `backend/src/controllers/myFeature.controller.js`
+3. **Routes** → `backend/src/routes/myFeature.routes.js`
+4. **Register** → add `fastify.register(require("./src/routes/myFeature.routes"))` in `backend/server.js`
 
-### HabitStats
-```javascript
-{
-  habit_id: ObjectId (ref: Habit, required, unique),
-  streak_actuel: Number (default: 0),
-  meilleur_streak: Number (default: 0),
-  taux_completion: Number (default: 0),
-  derniere_mise_a_jour: Date
-}
-```
-
-### Reminder
-```javascript
-{
-  habit_id: ObjectId (ref: Habit, required),
-  utilisateur_id: ObjectId (ref: User, required),
-  heure: String (required),
-  type_notification: String (enum: ["email", "sms", "notification"], required),
-  actif: Boolean (default: true)
-}
-```
-
-### Session
-```javascript
-{
-  utilisateur_id: ObjectId (ref: User, required),
-  token: String (required),
-  expiration: Date (required)
-}
-```
-
-### Onboarding
-```javascript
-{
-  utilisateur_id: ObjectId (ref: User, required),
-  etape: String (required),
-  termine: Boolean (default: false),
-  date_debut: Date (default: Date.now),
-  date_fin: Date
-}
-```
-
-## HTTP Status Codes
-
-- `200 OK` - Request successful
-- `201 Created` - Resource created successfully
-- `204 No Content` - Resource deleted successfully
-- `400 Bad Request` - Invalid request data or validation error
-- `404 Not Found` - Resource not found
-- `500 Internal Server Error` - Server error
-
-## Error Responses
-
-All error responses follow this format:
-```json
-{
-  "error": "Error message describing what went wrong"
-}
-```
-
-## Project Structure
-```
-├── controllers/          # Business logic handlers
-├── models/              # MongoDB schemas
-├── routes/              # API route definitions
-├── lib/                 # Database connection
-├── server/              # Main server file
-├── package.json         # Dependencies and scripts
-└── debug.js             # Debugging utility
-```
-
-## Development
-
-### Environment Variables
-None required for basic setup (uses default MongoDB connection)
-
-### Logging
-The API uses Fastify's built-in logger. All requests and responses are logged with:
-- Request method and URL
-- Status code
-- Response time
-
-### Adding New Endpoints
-1. Create a model in `models/`
-2. Create routes in `routes/`
-3. Register routes in `server/server.js`
-
-## Database
-
-MongoDB connection string: `mongodb://127.0.0.1/habitflow`
-
-Ensure MongoDB is running before starting the server.
+---
 
 ## License
+
 ISC
