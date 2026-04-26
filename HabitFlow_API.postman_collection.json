@@ -1,0 +1,1248 @@
+{
+  "info": {
+    "name": "HabitFlow Backend API",
+    "_postman_id": "habitflow-api-collection-v1",
+    "description": "Collection complète de toutes les APIs du backend HabitFlow. Utiliser la variable d'environnement `baseUrl` = http://localhost:3000. Exécuter Login d'abord pour obtenir le token automatiquement.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string" },
+    { "key": "refreshToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "", "type": "string" },
+    { "key": "habitId", "value": "", "type": "string" },
+    { "key": "logId", "value": "", "type": "string" },
+    { "key": "roleId", "value": "", "type": "string" },
+    { "key": "managerId", "value": "", "type": "string" },
+    { "key": "reminderId", "value": "", "type": "string" },
+    { "key": "sessionId", "value": "", "type": "string" },
+    { "key": "onboardingId", "value": "", "type": "string" },
+    { "key": "offDayId", "value": "", "type": "string" },
+    { "key": "ticketId", "value": "", "type": "string" },
+    { "key": "recapId", "value": "", "type": "string" },
+    { "key": "statsId", "value": "", "type": "string" },
+    { "key": "templateId", "value": "", "type": "string" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "0 - Root",
+      "item": [
+        {
+          "name": "GET / - Welcome",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/",
+            "description": "Message de bienvenue avec liste des endpoints"
+          }
+        },
+        {
+          "name": "GET /auth/config - LDAP Config",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/auth/config",
+            "description": "Retourne { ldapEnabled: boolean }"
+          }
+        }
+      ]
+    },
+    {
+      "name": "1 - Auth",
+      "item": [
+        {
+          "name": "POST /register",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "  if (json.user && json.user._id) pm.collectionVariables.set('userId', json.user._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Dupont\",\n  \"prenom\": \"Jean\",\n  \"email\": \"jean.dupont@example.com\",\n  \"mot_de_passe\": \"motdepasse123\"\n}"
+            },
+            "url": "{{baseUrl}}/register",
+            "description": "Inscription d'un nouvel utilisateur. Limite: 3/heure."
+          }
+        },
+        {
+          "name": "POST /login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "  if (json.refreshToken) pm.collectionVariables.set('refreshToken', json.refreshToken);",
+                  "  if (json.user && json.user._id) pm.collectionVariables.set('userId', json.user._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@habitflow.com\",\n  \"mot_de_passe\": \"Admin1234!\"\n}"
+            },
+            "url": "{{baseUrl}}/login",
+            "description": "Connexion standard. Limite: 5/min. Retourne accessToken, refreshToken, user."
+          }
+        },
+        {
+          "name": "POST /login/ldap",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@ldap.example.com\",\n  \"mot_de_passe\": \"ldappassword\"\n}"
+            },
+            "url": "{{baseUrl}}/login/ldap",
+            "description": "Connexion via LDAP (requiert LDAP_ENABLED=true). Limite: 5/min."
+          }
+        },
+        {
+          "name": "GET /profile",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/profile",
+            "description": "Retourne le profil de l'utilisateur connecté (id, email, role, permissions)."
+          }
+        },
+        {
+          "name": "POST /refresh",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.accessToken) pm.collectionVariables.set('accessToken', json.accessToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/refresh",
+            "description": "Renouvelle l'accessToken. Limite: 10/min."
+          }
+        },
+        {
+          "name": "POST /logout",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": "{{baseUrl}}/logout",
+            "description": "Déconnexion - invalide le refreshToken. Retourne 204."
+          }
+        },
+        {
+          "name": "POST /logout-all",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/logout-all",
+            "description": "Déconnexion de toutes les sessions - invalide tous les refreshTokens."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2 - Users",
+      "item": [
+        {
+          "name": "POST /users - Créer utilisateur (public)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('userId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Martin\",\n  \"prenom\": \"Marie\",\n  \"email\": \"marie.martin@example.com\",\n  \"mot_de_passe\": \"securepass456\"\n}"
+            },
+            "url": "{{baseUrl}}/users",
+            "description": "Création publique d'utilisateur (pas d'auth requise)."
+          }
+        },
+        {
+          "name": "GET /users - Liste tous les utilisateurs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "managerId", "value": "", "disabled": true, "description": "Filtrer par managerId (optionnel)" }
+              ]
+            },
+            "description": "Requiert permission manage:User. Filtrable par managerId."
+          }
+        },
+        {
+          "name": "GET /users/:id - Détail utilisateur",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "description": "Accessible par admin, soi-même ou manager."
+          }
+        },
+        {
+          "name": "PATCH /users/:id - Modifier utilisateur",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"NouveauNom\",\n  \"prenom\": \"NouveauPrenom\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "description": "Mise à jour partielle. Soi-même ou admin."
+          }
+        },
+        {
+          "name": "PUT /users/:id - Remplacer utilisateur",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"NomComplet\",\n  \"prenom\": \"PrenomComplet\",\n  \"email\": \"nouveau@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "description": "Remplacement complet. Soi-même ou admin."
+          }
+        },
+        {
+          "name": "PATCH /users/:id/role - Changer rôle",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"role\": \"{{roleId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}/role",
+            "description": "Admin seulement. Requiert manage:User."
+          }
+        },
+        {
+          "name": "PATCH /users/:id/status - Activer/Désactiver",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/users/{{userId}}/status",
+            "description": "Admin seulement. Requiert manage:User."
+          }
+        },
+        {
+          "name": "DELETE /users/:id - Anonymiser utilisateur",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/users/{{userId}}",
+            "description": "Anonymisation (soft delete). Admin seulement. Peut retourner { partial: {...} }."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3 - Habits",
+      "item": [
+        {
+          "name": "POST /habits - Créer une habitude",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  const id = json._id || (json.habit && json.habit._id);",
+                  "  if (id) pm.collectionVariables.set('habitId', id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Méditation quotidienne\",\n  \"titre\": \"Méditer 10 minutes\",\n  \"description\": \"Pratiquer la pleine conscience chaque matin\",\n  \"categorie\": \"bien-etre\",\n  \"priorite\": \"haute\",\n  \"frequence\": \"quotidienne\",\n  \"statut\": \"actif\"\n}"
+            },
+            "url": "{{baseUrl}}/habits",
+            "description": "Peut retourner { conflicts: [...] } si conflit avec off-days."
+          }
+        },
+        {
+          "name": "GET /habits - Toutes les habitudes (admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits",
+            "description": "Requiert permission read:Habit."
+          }
+        },
+        {
+          "name": "GET /habits/my - Mes habitudes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits/my",
+            "description": "Habitudes de l'utilisateur connecté."
+          }
+        },
+        {
+          "name": "GET /habits/templates - Templates d'habitudes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits/templates",
+            "description": "Liste des templates d'habitudes prédéfinis."
+          }
+        },
+        {
+          "name": "POST /habits/from-template/:templateId - Depuis template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Mon habitude personnalisée\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/from-template/{{templateId}}",
+            "description": "Crée une habitude à partir d'un template."
+          }
+        },
+        {
+          "name": "GET /habits/:id - Détail habitude",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits/{{habitId}}"
+          }
+        },
+        {
+          "name": "PUT /habits/:id - Modifier habitude",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Méditation mise à jour\",\n  \"description\": \"Nouvelle description\",\n  \"priorite\": \"moyenne\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/{{habitId}}",
+            "description": "Peut retourner { conflicts: [...] } si conflit avec off-days."
+          }
+        },
+        {
+          "name": "PATCH /habits/:id/status - Changer statut",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"pause\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/{{habitId}}/status"
+          }
+        },
+        {
+          "name": "PATCH /habits/:id/notes - Modifier notes",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Notes personnelles sur cette habitude\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/{{habitId}}/notes"
+          }
+        },
+        {
+          "name": "GET /habits/:id/notes/history - Historique notes",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits/{{habitId}}/notes/history"
+          }
+        },
+        {
+          "name": "GET /habits/:id/streaks - Séries",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/habits/{{habitId}}/streaks"
+          }
+        },
+        {
+          "name": "POST /habits/:id/clone - Cloner habitude",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Copie de méditation\"\n}"
+            },
+            "url": "{{baseUrl}}/habits/{{habitId}}/clone"
+          }
+        },
+        {
+          "name": "DELETE /habits/:id - Archiver habitude (soft)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/habits/{{habitId}}",
+            "description": "Retourne 204."
+          }
+        },
+        {
+          "name": "DELETE /habits/:id/hard - Supprimer définitivement",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/habits/{{habitId}}/hard",
+            "description": "Suppression en cascade. Peut retourner { partial: {...} }."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4 - Habit Logs",
+      "item": [
+        {
+          "name": "POST /logs - Créer un log",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('logId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"habit_id\": \"{{habitId}}\",\n  \"date\": \"2026-04-25\",\n  \"statut\": \"complete\",\n  \"notes\": \"Séance réussie ce matin\"\n}"
+            },
+            "url": "{{baseUrl}}/logs"
+          }
+        },
+        {
+          "name": "POST /logs/toggle - Basculer statut log",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"habit_id\": \"{{habitId}}\",\n  \"date\": \"2026-04-25\"\n}"
+            },
+            "url": "{{baseUrl}}/logs/toggle",
+            "description": "Bascule le statut du log pour une date (fait/non fait)."
+          }
+        },
+        {
+          "name": "POST /logs/catchup - Rattrapage avec justification",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"habit_id\": \"{{habitId}}\",\n  \"date\": \"2026-04-24\",\n  \"note\": \"J'ai fait cette habitude mais oublié de la valider\",\n  \"photo_url\": \"https://example.com/photo.jpg\"\n}"
+            },
+            "url": "{{baseUrl}}/logs/catchup",
+            "description": "Log de rattrapage. note (texte) obligatoire. photo_url optionnel."
+          }
+        },
+        {
+          "name": "GET /logs - Tous les logs (admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/logs",
+            "description": "Requiert permission read:HabitLog."
+          }
+        },
+        {
+          "name": "GET /logs/:id - Détail log",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/logs/{{logId}}"
+          }
+        },
+        {
+          "name": "GET /logs/incomplete-for-date/:date - Logs incomplets",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/logs/incomplete-for-date/2026-04-25",
+            "description": "Habitudes non complétées pour une date."
+          }
+        },
+        {
+          "name": "PUT /logs/:id - Modifier log",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"statut\": \"complete\",\n  \"notes\": \"Notes mises à jour\"\n}"
+            },
+            "url": "{{baseUrl}}/logs/{{logId}}"
+          }
+        },
+        {
+          "name": "DELETE /logs/:id - Supprimer log",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/logs/{{logId}}",
+            "description": "Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5 - Habit Stats",
+      "item": [
+        {
+          "name": "POST /stats - Créer stats",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('statsId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"habit_id\": \"{{habitId}}\",\n  \"taux_completion\": 85,\n  \"streak_actuel\": 7,\n  \"meilleur_streak\": 14\n}"
+            },
+            "url": "{{baseUrl}}/stats",
+            "description": "Requiert permission manage:HabitStats."
+          }
+        },
+        {
+          "name": "GET /stats - Toutes les stats (admin)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/stats",
+            "description": "Requiert permission read:HabitStats."
+          }
+        },
+        {
+          "name": "GET /stats/:id - Détail stats",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/stats/{{statsId}}"
+          }
+        },
+        {
+          "name": "GET /stats/habit/:habitId - Stats par habitude",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/stats/habit/{{habitId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6 - Categories",
+      "item": [
+        {
+          "name": "GET /categories - Toutes les catégories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories",
+            "description": "Retourne les 8 catégories par défaut (sport, apprentissage, bien_etre, travail, sante, finance, social, creativite) + les catégories custom de l'utilisateur connecté (tickets approuvés). La catégorie 'autre' est cachée — elle sert de thème automatique pour les custom. Les catégories custom ont is_custom: true et slug = ticket_id."
+          }
+        },
+        {
+          "name": "GET /categories/sport - Catégorie standard",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories/sport",
+            "description": "Slugs valides: sport | apprentissage | bien_etre | travail | sante | finance | social | creativite. Erreur CAT-001 si slug inconnu ou 'autre' (catégorie cachée)."
+          }
+        },
+        {
+          "name": "GET /categories/:ticket_id - Catégorie custom par ticket_id",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/categories/{{ticketId}}",
+            "description": "Récupère une catégorie custom par son ticket_id. Retourne 404 (CAT-001) si le ticket n'appartient pas à l'utilisateur connecté."
+          }
+        }
+      ]
+    },
+    {
+      "name": "7 - Progress",
+      "item": [
+        {
+          "name": "GET /progress/my - Mon progrès global",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/progress/my"
+          }
+        },
+        {
+          "name": "GET /progress/today - Progrès du jour",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/progress/today"
+          }
+        },
+        {
+          "name": "GET /progress/calendar - Vue calendrier",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/progress/calendar?date=2026-04-01",
+              "host": ["{{baseUrl}}"],
+              "path": ["progress", "calendar"],
+              "query": [
+                { "key": "date", "value": "2026-04-01", "description": "Date ISO - défaut: mois courant" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8 - Reminders",
+      "item": [
+        {
+          "name": "POST /reminders - Créer rappel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('reminderId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"habit_id\": \"{{habitId}}\",\n  \"heure\": \"08:00\",\n  \"jours\": [\"lundi\", \"mardi\", \"mercredi\", \"jeudi\", \"vendredi\"],\n  \"actif\": true\n}"
+            },
+            "url": "{{baseUrl}}/reminders",
+            "description": "utilisateur_id ajouté automatiquement depuis le token."
+          }
+        },
+        {
+          "name": "GET /reminders - Liste rappels",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reminders",
+            "description": "Admin: tous. User: ses propres. Requiert read:Reminder."
+          }
+        },
+        {
+          "name": "GET /reminders/:id - Détail rappel",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/reminders/{{reminderId}}"
+          }
+        },
+        {
+          "name": "DELETE /reminders/:id - Supprimer rappel",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/reminders/{{reminderId}}",
+            "description": "Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "9 - Sessions",
+      "item": [
+        {
+          "name": "POST /sessions - Créer session",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('sessionId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"device\": \"iPhone 14\",\n  \"platform\": \"iOS\",\n  \"fcm_token\": \"token_firebase_ici\"\n}"
+            },
+            "url": "{{baseUrl}}/sessions",
+            "description": "utilisateur_id ajouté automatiquement depuis le token."
+          }
+        },
+        {
+          "name": "GET /sessions - Liste sessions",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/sessions",
+            "description": "Admin: tous. User: ses propres. Requiert read:Session."
+          }
+        },
+        {
+          "name": "DELETE /sessions/:id - Supprimer session",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/sessions/{{sessionId}}",
+            "description": "Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 - Onboarding",
+      "item": [
+        {
+          "name": "POST /onboarding - Créer onboarding",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('onboardingId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objectif\": \"Améliorer ma productivité\",\n  \"niveau\": \"debutant\"\n}"
+            },
+            "url": "{{baseUrl}}/onboarding"
+          }
+        },
+        {
+          "name": "POST /onboarding/categories - Sauvegarder catégories",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"categories\": [\"bien-etre\", \"sport\", \"nutrition\"]\n}"
+            },
+            "url": "{{baseUrl}}/onboarding/categories",
+            "description": "Met isFirstLogin à false. Min 1 catégorie. Valeurs validées contre CATEGORY_SLUGS."
+          }
+        },
+        {
+          "name": "GET /onboarding - Liste onboardings",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/onboarding",
+            "description": "Admin: tous. User: ses propres. Requiert read:Onboarding."
+          }
+        },
+        {
+          "name": "GET /onboarding/:id - Détail onboarding",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/onboarding/{{onboardingId}}"
+          }
+        },
+        {
+          "name": "PUT /onboarding/:id - Modifier onboarding",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"objectif\": \"Objectif mis à jour\",\n  \"niveau\": \"intermediaire\"\n}"
+            },
+            "url": "{{baseUrl}}/onboarding/{{onboardingId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 - Roles",
+      "item": [
+        {
+          "name": "GET /roles - Liste des rôles",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/roles",
+            "description": "Requiert permission read:Role."
+          }
+        },
+        {
+          "name": "POST /roles - Créer rôle",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('roleId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"superviseur\",\n  \"description\": \"Rôle de superviseur d'équipe\",\n  \"permissions\": [\"HABITS_VIEW\", \"LOGS_VIEW\", \"STATS_VIEW\", \"USERS_VIEW\"]\n}"
+            },
+            "url": "{{baseUrl}}/roles",
+            "description": "Requiert permission manage:Role."
+          }
+        },
+        {
+          "name": "PUT /roles/:id - Modifier rôle",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"superviseur_senior\",\n  \"description\": \"Rôle mis à jour\",\n  \"permissions\": [\"HABITS_VIEW\", \"HABITS_MANAGE\", \"LOGS_VIEW\", \"STATS_VIEW\", \"USERS_VIEW\"]\n}"
+            },
+            "url": "{{baseUrl}}/roles/{{roleId}}",
+            "description": "Requiert permission manage:Role."
+          }
+        },
+        {
+          "name": "DELETE /roles/:id - Supprimer rôle",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/roles/{{roleId}}",
+            "description": "Requiert permission manage:Role. Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 - Managers",
+      "item": [
+        {
+          "name": "GET /managers - Liste des managers",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/managers",
+            "description": "Admin seulement. Requiert manage:Manager."
+          }
+        },
+        {
+          "name": "POST /managers - Créer manager",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('managerId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Bernard\",\n  \"prenom\": \"Sophie\",\n  \"email\": \"sophie.bernard@example.com\",\n  \"mot_de_passe\": \"ManagerPass123!\",\n  \"departement\": \"Ressources Humaines\"\n}"
+            },
+            "url": "{{baseUrl}}/managers",
+            "description": "Admin seulement. Requiert manage:Manager."
+          }
+        },
+        {
+          "name": "PATCH /managers/:id - Modifier manager",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"NouveauNom\",\n  \"departement\": \"Marketing\"\n}"
+            },
+            "url": "{{baseUrl}}/managers/{{managerId}}",
+            "description": "Admin seulement. Requiert manage:Manager."
+          }
+        },
+        {
+          "name": "DELETE /managers/:id - Supprimer manager",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/managers/{{managerId}}",
+            "description": "Admin seulement. Retourne 204."
+          }
+        },
+        {
+          "name": "GET /managers/:managerId/team - Équipe d'un manager",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/managers/{{managerId}}/team",
+            "description": "Admin seulement. Requiert manage:Manager."
+          }
+        },
+        {
+          "name": "GET /managers/users - Mes utilisateurs (manager)",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/managers/users",
+            "description": "Endpoint manager. Requiert read:ManagerUser."
+          }
+        },
+        {
+          "name": "GET /managers/users/notes - Notes de mes utilisateurs",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/managers/users/notes",
+            "description": "Endpoint manager. Requiert read:ManagerUser."
+          }
+        },
+        {
+          "name": "POST /managers/users - Créer utilisateur (manager)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Leroy\",\n  \"prenom\": \"Thomas\",\n  \"email\": \"thomas.leroy@example.com\",\n  \"mot_de_passe\": \"UserPass123!\",\n  \"departement\": \"Ventes\"\n}"
+            },
+            "url": "{{baseUrl}}/managers/users",
+            "description": "Manager crée un user dans son équipe. Requiert manage:ManagerUser."
+          }
+        },
+        {
+          "name": "PATCH /managers/users/:id - Modifier utilisateur (manager)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"NomModifie\",\n  \"isActive\": true\n}"
+            },
+            "url": "{{baseUrl}}/managers/users/{{userId}}",
+            "description": "Manager modifie un de ses users. Requiert manage:ManagerUser."
+          }
+        },
+        {
+          "name": "DELETE /managers/users/:id - Supprimer utilisateur (manager)",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/managers/users/{{userId}}",
+            "description": "Manager supprime un de ses users. Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 - Off-Days",
+      "item": [
+        {
+          "name": "GET /off-days - Tous les off-days",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/off-days"
+          }
+        },
+        {
+          "name": "GET /off-days/range - Off-days par plage de dates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/off-days/range?start=2026-04-01&end=2026-04-30",
+              "host": ["{{baseUrl}}"],
+              "path": ["off-days", "range"],
+              "query": [
+                { "key": "start", "value": "2026-04-01" },
+                { "key": "end", "value": "2026-04-30" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "POST /off-days - Créer off-day",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('offDayId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"date\": \"2026-05-01\",\n  \"label\": \"Fête du Travail\",\n  \"type\": \"ferie\"\n}"
+            },
+            "url": "{{baseUrl}}/off-days",
+            "description": "Requiert manage:OffDay. createdBy ajouté automatiquement."
+          }
+        },
+        {
+          "name": "PATCH /off-days/:id - Modifier off-day",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"label\": \"Jour férié mis à jour\"\n}"
+            },
+            "url": "{{baseUrl}}/off-days/{{offDayId}}",
+            "description": "Requiert manage:OffDay."
+          }
+        },
+        {
+          "name": "DELETE /off-days/:id - Supprimer off-day",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/off-days/{{offDayId}}",
+            "description": "Requiert manage:OffDay. Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 - Category Tickets",
+      "item": [
+        {
+          "name": "GET /category-tickets/my - Mes tickets",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/category-tickets/my",
+            "description": "Liste les tickets créés par l'utilisateur connecté."
+          }
+        },
+        {
+          "name": "POST /category-tickets - Créer ticket (scope personal)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "  const json = pm.response.json();",
+                  "  if (json._id) pm.collectionVariables.set('ticketId', json._id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Catégorie Natation\",\n  \"description\": \"Je voudrais une catégorie dédiée à la natation\",\n  \"proposed_category_name\": \"Natation\",\n  \"scope\": \"personal\"\n}"
+            },
+            "url": "{{baseUrl}}/category-tickets",
+            "description": "Crée un ticket pour demander une catégorie custom. scope='personal' (défaut) → visible uniquement par le demandeur. Thème de 'autre' attribué automatiquement à l'approbation."
+          }
+        },
+        {
+          "name": "POST /category-tickets - Créer ticket (scope team - manager only)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Catégorie Yoga équipe\",\n  \"description\": \"Catégorie yoga pour toute mon équipe\",\n  \"proposed_category_name\": \"Yoga\",\n  \"scope\": \"team\"\n}"
+            },
+            "url": "{{baseUrl}}/category-tickets",
+            "description": "scope='team' réservé aux managers. À l'approbation, la catégorie est poussée dans custom_categories du manager ET de tous ses utilisateurs. Retourne 403 (TKT-008) si le connecté n'est pas manager."
+          }
+        },
+        {
+          "name": "GET /category-tickets - Tous les tickets (admin)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/category-tickets",
+              "host": ["{{baseUrl}}"],
+              "path": ["category-tickets"],
+              "query": [
+                { "key": "status", "value": "pending", "disabled": true, "description": "Filtrer par statut: pending | in_review | done | rejected" }
+              ]
+            },
+            "description": "Requiert manage:Ticket. Retourne les tickets avec user populé (nom + email). Filtrable par ?status=pending|in_review|done|rejected."
+          }
+        },
+        {
+          "name": "PATCH /category-tickets/:id/status - Approuver ticket (done)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"done\",\n  \"admin_note\": \"Natation\"\n}"
+            },
+            "url": "{{baseUrl}}/category-tickets/{{ticketId}}/status",
+            "description": "Requiert manage:Ticket. Quand status='done': admin_note devient le label de la catégorie custom (fallback: proposed_category_name). La catégorie est poussée dans user.custom_categories selon le scope du ticket."
+          }
+        },
+        {
+          "name": "PATCH /category-tickets/:id/status - Rejeter ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"rejected\",\n  \"admin_note\": \"Catégorie déjà couverte par 'Sport'\"\n}"
+            },
+            "url": "{{baseUrl}}/category-tickets/{{ticketId}}/status",
+            "description": "Requiert manage:Ticket. Statuts valides: pending | in_review | done | rejected."
+          }
+        },
+        {
+          "name": "DELETE /category-tickets/:id - Supprimer ticket",
+          "request": {
+            "method": "DELETE",
+            "url": "{{baseUrl}}/category-tickets/{{ticketId}}",
+            "description": "Supprime son propre ticket. Seulement si status='pending'. Retourne 204."
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 - Weekly Recap",
+      "item": [
+        {
+          "name": "GET /weekly-recap/latest - Dernier recap",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/weekly-recap/latest"
+          }
+        },
+        {
+          "name": "GET /weekly-recap - Liste des recaps",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/weekly-recap"
+          }
+        },
+        {
+          "name": "PATCH /weekly-recap/:id/viewed - Marquer comme vu",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/weekly-recap/{{recapId}}/viewed"
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 - Admin Stats",
+      "item": [
+        {
+          "name": "GET /admin/stats - Stats administrateur",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/admin/stats",
+            "description": "Requiert permission read:AdminStats. Retourne 12 semaines de données."
+          }
+        }
+      ]
+    }
+  ]
+}

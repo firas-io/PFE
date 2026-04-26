@@ -1,0 +1,33 @@
+export const ErrorsCodes = {
+  FIELDS_REQUIRED:       "AUTH-001",
+  EMAIL_IN_USE:          "AUTH-002",
+  ROLE_NOT_INIT:         "AUTH-003",
+  INVALID_CREDENTIALS:   "AUTH-004",
+  USER_DEACTIVATED:      "AUTH-005",
+  ROLE_NOT_CONFIGURED:   "AUTH-006",
+  LDAP_DISABLED:         "AUTH-007",
+  REFRESH_TOKEN_MISSING: "AUTH-008",
+  REFRESH_TOKEN_INVALID: "AUTH-009",
+  REFRESH_TOKEN_EXPIRED: "AUTH-010",
+  REFRESH_TOKEN_REVOKED: "AUTH-011",
+  REFRESH_TOKEN_REUSE:   "AUTH-012",
+  LOCAL_LOGIN_DISABLED:  "AUTH-013",
+  REGISTER_DISABLED_LDAP: "AUTH-014",
+};
+
+export const ErrorMessages = {
+  [ErrorsCodes.FIELDS_REQUIRED]:       "All fields are required",
+  [ErrorsCodes.EMAIL_IN_USE]:          "Email already in use",
+  [ErrorsCodes.ROLE_NOT_INIT]:         "Default role not initialised — restart the server.",
+  [ErrorsCodes.INVALID_CREDENTIALS]:   "Invalid email or password",
+  [ErrorsCodes.USER_DEACTIVATED]:      "User deactivated",
+  [ErrorsCodes.ROLE_NOT_CONFIGURED]:   "User role not configured",
+  [ErrorsCodes.LDAP_DISABLED]:         "LDAP authentication disabled",
+  [ErrorsCodes.REFRESH_TOKEN_MISSING]: "Refresh token is required",
+  [ErrorsCodes.REFRESH_TOKEN_INVALID]: "Invalid refresh token",
+  [ErrorsCodes.REFRESH_TOKEN_EXPIRED]: "Refresh token expired",
+  [ErrorsCodes.REFRESH_TOKEN_REVOKED]: "Refresh token has been revoked",
+  [ErrorsCodes.REFRESH_TOKEN_REUSE]:   "Refresh token reuse detected — all sessions invalidated",
+  [ErrorsCodes.LOCAL_LOGIN_DISABLED]:  "Password login is disabled — use LDAP (directory credentials)",
+  [ErrorsCodes.REGISTER_DISABLED_LDAP]: "Self-registration is disabled when LDAP authentication is enabled",
+};

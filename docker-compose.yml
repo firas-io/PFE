@@ -1,18 +1,22 @@
 name: habitflow-backend
-services:
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
 
+# ─── Réseau partagé — le frontend le rejoint via : docker run --network habitflow-net
+networks:
+  habitflow-net:
+    name: habitflow-net
+    driver: bridge
+
+volumes:
+  habitflow-data:
+  ldap-data:
+  ldap-config:
+
+services:
+
+  # ── API Fastify ────────────────────────────────────────────────────────────
   backend:
     build: ./backend
+    container_name: habitflow-backend
     ports:
       - "5000:5000"
     environment:
@@ -23,11 +27,12 @@ services:
       - ADMIN_PASSWORD=Admin123!
       - LDAP_ENABLED=true
       - LDAP_URL=ldap://openldap:389
-      - LDAP_BASE_DN=ou=people,dc=habitflow,dc=local
+      - LDAP_BASE_DN=dc=habitflow,dc=local
       - LDAP_BIND_DN=cn=admin,dc=habitflow,dc=local
       - LDAP_BIND_PASSWORD=admin
       - LDAP_USER_FILTER=(mail={{username}})
       - LDAP_USER_DN_TEMPLATE=uid={{uid}},ou=people,dc=habitflow,dc=local
+      - LDAP_MANAGERS_OU=ou=managers,dc=habitflow,dc=local
       - LDAP_ADMIN_EMAIL=admin@habitflow.local
     depends_on:
       mongo:
@@ -40,16 +45,16 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - habitflow-net
     restart: unless-stopped
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
 
-
+  # ── MongoDB ────────────────────────────────────────────────────────────────
   mongo:
     image: mongo:latest
+    container_name: habitflow-mongo
     ports:
-      - "27017:27017"
+      - "27018:27017"
     volumes:
       - habitflow-data:/data/db
     healthcheck:
@@ -58,9 +63,13 @@ services:
       timeout: 5s
       retries: 5
       start_period: 15s
+    networks:
+      - habitflow-net
 
+  # ── OpenLDAP ───────────────────────────────────────────────────────────────
   openldap:
     image: osixia/openldap:1.5.0
+    container_name: habitflow-ldap
     command: ["--copy-service"]
     environment:
       - LDAP_ORGANISATION=HabitFlow
@@ -80,10 +89,14 @@ services:
       timeout: 5s
       retries: 10
       start_period: 20s
+    networks:
+      - habitflow-net
     restart: unless-stopped
 
+  # ── phpLDAPadmin (UI LDAP) ─────────────────────────────────────────────────
   phpldapadmin:
     image: osixia/phpldapadmin:0.9.0
+    container_name: habitflow-phpldapadmin
     environment:
       - PHPLDAPADMIN_LDAP_HOSTS=openldap
       - PHPLDAPADMIN_HTTPS=false
@@ -92,10 +105,14 @@ services:
     depends_on:
       openldap:
         condition: service_healthy
+    networks:
+      - habitflow-net
     restart: unless-stopped
 
+  # ── LDAP seed (run-once) ───────────────────────────────────────────────────
   ldap-seed:
     image: osixia/openldap:1.5.0
+    container_name: habitflow-ldap-seed
     depends_on:
       openldap:
         condition: service_healthy
@@ -108,9 +125,6 @@ services:
       -w 'admin'
       -f /seed/50-seed.ldif
       -c || true"
+    networks:
+      - habitflow-net
     restart: "no"
-
-volumes:
-  habitflow-data:
-  ldap-data:
-  ldap-config:

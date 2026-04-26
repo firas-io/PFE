@@ -1,0 +1,1 @@
+export { UpdateRoleModal } from './UpdateRoleModal';

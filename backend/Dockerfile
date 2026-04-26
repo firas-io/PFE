@@ -19,4 +19,4 @@ COPY . .
 EXPOSE 5000
 
 # Commande de démarrage
-CMD ["node", "server.js"]
+CMD ["node", "--import", "./src/loader.js", "server.js"]

@@ -1,0 +1,1 @@
+export { UpdateMyUserModal } from './UpdateMyUserModal';

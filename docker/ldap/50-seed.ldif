@@ -1,6 +1,44 @@
+# ─── OU : managers ────────────────────────────────────────────────────────────
+dn: ou=managers,dc=habitflow,dc=local
+objectClass: organizationalUnit
+ou: managers
+
+# ─── OU : people (utilisateurs standards) ─────────────────────────────────────
 dn: ou=people,dc=habitflow,dc=local
 objectClass: organizationalUnit
 ou: people
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MANAGERS  (ou=managers)
+# ══════════════════════════════════════════════════════════════════════════════
+
+dn: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Sophie Martin
+sn: Martin
+givenName: Sophie
+uid: sophie.martin
+mail: sophie.martin@habitflow.local
+userPassword: Manager123!
+
+dn: uid=karim.amine,ou=managers,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Karim Amine
+sn: Amine
+givenName: Karim
+uid: karim.amine
+mail: karim.amine@habitflow.local
+userPassword: Manager123!
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ADMIN  (ou=people — email spécial reconnu comme admin)
+# ══════════════════════════════════════════════════════════════════════════════
 
 dn: uid=admin,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
@@ -14,6 +52,10 @@ uid: admin
 mail: admin@habitflow.local
 userPassword: Admin123!
 
+# ══════════════════════════════════════════════════════════════════════════════
+# UTILISATEURS  (ou=people) — attribut manager = DN complet du manager
+# ══════════════════════════════════════════════════════════════════════════════
+
 dn: uid=ali.ben,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
 objectClass: organizationalPerson
@@ -25,6 +67,7 @@ givenName: Ali
 uid: ali.ben
 mail: ali.ben@habitflow.local
 userPassword: Test123!
+manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
 
 dn: uid=sara.kim,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
@@ -37,30 +80,7 @@ givenName: Sara
 uid: sara.kim
 mail: sara.kim@habitflow.local
 userPassword: Test123!
-
-dn: uid=omar.said,ou=people,dc=habitflow,dc=local
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-cn: Omar Said
-sn: Said
-givenName: Omar
-uid: omar.said
-mail: omar.said@habitflow.local
-userPassword: Test123!
-
-dn: uid=lina.martin,ou=people,dc=habitflow,dc=local
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-cn: Lina Martin
-sn: Martin
-givenName: Lina
-uid: lina.martin
-mail: lina.martin@habitflow.local
-userPassword: Test123!
+manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
 
 dn: uid=yassine.rahim,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
@@ -73,30 +93,7 @@ givenName: Yassine
 uid: yassine.rahim
 mail: yassine.rahim@habitflow.local
 userPassword: Test123!
-
-dn: uid=nora.haddad,ou=people,dc=habitflow,dc=local
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-cn: Nora Haddad
-sn: Haddad
-givenName: Nora
-uid: nora.haddad
-mail: nora.haddad@habitflow.local
-userPassword: Test123!
-
-dn: uid=karim.amine,ou=people,dc=habitflow,dc=local
-objectClass: inetOrgPerson
-objectClass: organizationalPerson
-objectClass: person
-objectClass: top
-cn: Karim Amine
-sn: Amine
-givenName: Karim
-uid: karim.amine
-mail: karim.amine@habitflow.local
-userPassword: Test123!
+manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
 
 dn: uid=maya.zidane,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
@@ -109,6 +106,46 @@ givenName: Maya
 uid: maya.zidane
 mail: maya.zidane@habitflow.local
 userPassword: Test123!
+manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
+
+dn: uid=omar.said,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Omar Said
+sn: Said
+givenName: Omar
+uid: omar.said
+mail: omar.said@habitflow.local
+userPassword: Test123!
+manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
+
+dn: uid=lina.martin,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Lina Martin
+sn: Martin
+givenName: Lina
+uid: lina.martin
+mail: lina.martin@habitflow.local
+userPassword: Test123!
+manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
+
+dn: uid=nora.haddad,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Nora Haddad
+sn: Haddad
+givenName: Nora
+uid: nora.haddad
+mail: nora.haddad@habitflow.local
+userPassword: Test123!
+manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
 
 dn: uid=adam.faris,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
@@ -121,3 +158,4 @@ givenName: Adam
 uid: adam.faris
 mail: adam.faris@habitflow.local
 userPassword: Test123!
+manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local

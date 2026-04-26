@@ -1,10 +1,16 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+@import "tw-animate-css";
+
 :root {
-  --background: #f5f7fb;
-  --foreground: #0f172a;
-  --accent: #00b3a4; /* teal HabitFlow */
-  --accent-soft: #e0f7f5;
-  --accent-dark: #009287;
-  --border-soft: #e2e8f0;
+  --background: #F0F0FA;
+  --foreground: #1E1B4B;
+  --accent: #4338CA;
+  --accent-soft: #EEF2FF;
+  --accent-dark: #3730a3;
+  --border-soft: #E5E7EB;
+  --section-gap: 1.5rem;
+  --radius-card: 1rem;
 }
 
 html {
@@ -23,20 +29,18 @@ body {
   flex-direction: column;
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+a {
+  color: var(--accent);
+  text-decoration: none;
 }
 
-a {
-  color: var(--accent-dark);
-  text-decoration: none;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (prefers-color-scheme: dark) {

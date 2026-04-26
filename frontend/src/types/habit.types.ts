@@ -3,7 +3,18 @@
  * TypeScript interfaces for Habit-related API data.
  */
 
-export type HabitCategorie = "sante" | "travail" | "apprentissage" | "bien_etre" | "sport" | "autre";
+/** Slugs officiels + chaîne libre pour données historiques ou futures. */
+export type HabitCategorie =
+  | "sante"
+  | "travail"
+  | "apprentissage"
+  | "bien_etre"
+  | "sport"
+  | "finance"
+  | "social"
+  | "creativite"
+  | "autre"
+  | (string & {});
 export type HabitPriorite = "high" | "medium" | "low";
 export type HabitStatut = "active" | "pause" | "archived";
 export type HabitFrequence = "daily" | "weekly" | "monthly" | "specific_days" | "times_per_week";
@@ -15,6 +26,7 @@ export interface Habit {
   nom: string;
   description?: string;
   categorie?: HabitCategorie;
+  categorie_champs?: Record<string, string | number | boolean | null | undefined>;
   statut: HabitStatut;
   priorite?: HabitPriorite;
   frequence?: HabitFrequence;
