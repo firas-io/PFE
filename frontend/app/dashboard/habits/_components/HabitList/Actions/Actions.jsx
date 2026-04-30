@@ -11,7 +11,7 @@ const Btn = ({ onClick, disabled, title, className, children }) => (
     disabled={disabled}
     title={title}
     className={cn(
-      'flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted-foreground transition-smooth',
+      'd-flex h-8 w-8 align-items-center justify-content-center rounded-3 border border-border text-muted transition-smooth',
       'hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
       'disabled:pointer-events-none disabled:opacity-40',
       className
@@ -36,7 +36,7 @@ export const Actions = ({
   const isActive = !habit.statut || habit.statut === 'active';
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="d-flex align-items-center gap-1">
       {/* Weekly complete toggle */}
       <WeeklyCompletionToggle
         weeklyCompletion={weeklyCompletion}

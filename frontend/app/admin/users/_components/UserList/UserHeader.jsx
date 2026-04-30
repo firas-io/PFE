@@ -4,14 +4,17 @@ import { IconUserPlus } from '@tabler/icons-react';
 
 export const UserHeader = ({ total, loading, onOpenCreate }) => {
   return (
-    <div className="d-flex align-items-center justify-content-between gap-3 mb-3">
-      <div className="text-secondary">
-        {loading ? 'Chargement...' : `${total} utilisateur(s)`}
+    <div className="adm-header">
+      <div>
+        <h1 className="adm-title">Utilisateurs</h1>
+        <p className="adm-subtitle">{loading ? 'Chargement…' : `${total} utilisateur${total !== 1 ? 's' : ''} au total`}</p>
       </div>
-      <button className="btn btn-primary" type="button" onClick={onOpenCreate}>
-        <IconUserPlus size={18} className="me-2" />
-        Créer un utilisateur
-      </button>
+      <div className="adm-header-actions">
+        <button className="btn btn-primary" type="button" onClick={onOpenCreate}>
+          <IconUserPlus size={16} className="me-2" />
+          Créer un utilisateur
+        </button>
+      </div>
     </div>
   );
 };

@@ -293,6 +293,7 @@ class UsersService {
     if (id !== requesterId && !isAdmin) throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
 
     const { nom, prenom, email, departement } = body;
+    const nextWeekSameHabitsRaw = body?.nextWeekSameHabits ?? body?.next_week_same_habits;
     if (email) {
       const conflict = await Users.findOne({ email, _id: { $ne: id } });
       if (conflict) throw new AppError(ErrorMessages[ErrorsCodes.EMAIL_IN_USE], 400, ErrorsCodes.EMAIL_IN_USE);
@@ -303,6 +304,7 @@ class UsersService {
     if (prenom      !== undefined) update.firstName  = prenom;
     if (email       !== undefined) update.email      = email;
     if (departement !== undefined) update.department = departement;
+    if (nextWeekSameHabitsRaw !== undefined) update.nextWeekSameHabits = !!nextWeekSameHabitsRaw;
 
     const user = await Users.updateOne({ _id: id }, { $set: update });
     if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);

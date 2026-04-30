@@ -29,22 +29,22 @@ export const Actions = ({ manager, onRefetch }) => {
 
   return (
     <>
-      <div className="btn-list flex-nowrap">
+      <div className="adm-actions">
         <button
-          className="btn btn-sm btn-icon btn-primary"
+          className="adm-btn-icon"
           type="button"
           title="Modifier"
           onClick={() => setManagerToEdit(manager)}
         >
-          <IconEdit size={16} />
+          <IconEdit size={15} />
         </button>
         <button
-          className="btn btn-sm btn-icon btn-danger"
+          className="adm-btn-icon adm-btn-icon--danger"
           type="button"
           title="Supprimer"
           onClick={() => setShowConfirm(true)}
         >
-          <IconTrash size={16} />
+          <IconTrash size={15} />
         </button>
       </div>
 

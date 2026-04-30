@@ -1,0 +1,24 @@
+/* ═══════════════════════════════════════════════════════
+   HabitFlow — Styles entry point
+   Bootstrap 5 is loaded via CDN <link> in app/layout.tsx.
+   This file covers project-specific styles only.
+   Import order:
+     1. Fonts (Google Fonts)
+     2. Variables (CSS tokens)
+     3. Reset / base HTML
+     4. Custom utility classes
+     5. Admin/user shell layout
+     6. Dashboard design-system vars
+   ═══════════════════════════════════════════════════════ */
+
+@import "./base/_fonts.css";
+@import "./base/_variables.css";
+@import "./base/_reset.css";
+@import "./base/_utilities.css";
+@import "./admin/_layout.css";
+@import "./admin/_admin-pages.css";
+@import "./dashboard/_theme.css";
+@import "./components/_toast.css";
+@import "./components/_history.css";
+@import "./components/_tickets.css";
+@import "./components/_calendar.css";

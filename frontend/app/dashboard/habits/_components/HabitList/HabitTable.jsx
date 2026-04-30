@@ -23,13 +23,13 @@ export const HabitTable = ({
 
   if (habits.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center gap-3 py-16 px-4 text-center">
-        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-muted">
-          <Bookmark className="h-7 w-7 text-muted-foreground" />
+      <div className="d-flex flex-column align-items-center justify-content-center gap-3 py-16 px-4 text-center">
+        <div className="d-flex h-16 w-16 align-items-center justify-content-center rounded-5 bg-light">
+          <Bookmark className="h-7 w-7 text-muted" />
         </div>
         <div>
-          <p className="font-semibold text-foreground">Aucune habitude trouvée</p>
-          <p className="text-sm text-muted-foreground mt-1">
+          <p className="fw-semibold text-body">Aucune habitude trouvée</p>
+          <p className="text-sm text-muted mt-1">
             Ajustez vos filtres ou créez votre première habitude.
           </p>
         </div>
@@ -38,7 +38,7 @@ export const HabitTable = ({
   }
 
   return (
-    <div className="p-4 flex flex-col gap-4">
+    <div className="p-3 d-flex flex-column gap-2">
       <AnimatePresence initial={false}>
         {habits.map((habit, index) => (
           <HabitCard

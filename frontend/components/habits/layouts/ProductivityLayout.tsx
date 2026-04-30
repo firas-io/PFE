@@ -8,7 +8,7 @@ import type { HabitsLayoutProps } from "../layoutTypes";
 function MiniHeatmap({ active }: { active: number }) {
   const cells = Array.from({ length: 28 }, (_, i) => i < active);
   return (
-    <div className="grid grid-cols-7 gap-1" aria-label="Heatmap de concentration (symbolique)">
+    <div className="d-grid grid-cols-7 gap-1" aria-label="Heatmap de concentration (symbolique)">
       {cells.map((on, i) => (
         <div
           key={i}
@@ -27,12 +27,12 @@ export default function ProductivityLayout(props: HabitsLayoutProps) {
     <DefaultLayout
       {...props}
       beforeFields={
-        <div className="space-y-3 rounded-xl border border-violet-500/20 bg-violet-500/5 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
+        <div className="space-y-3 rounded-4 border border-violet-500/20 bg-violet-500/5 p-3">
+          <div className="d-flex align-items-center justify-content-between gap-3">
+            <div className="d-flex align-items-center gap-2">
               <CheckSquare className="h-5 w-5 text-violet-600 dark:text-violet-300" aria-hidden />
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                <p className="text-[10px] fw-semibold text-uppercase tracking-wide text-muted">
                   Tâches terminées
                 </p>
                 <motion.span
@@ -40,14 +40,14 @@ export default function ProductivityLayout(props: HabitsLayoutProps) {
                   initial={{ scale: 1.15, opacity: 0.5 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={{ type: "spring", stiffness: 400, damping: 18 }}
-                  className="inline-block text-3xl font-black tabular-nums text-violet-700 dark:text-violet-200"
+                  className="d-inline-block fs-2 font-black tabular-nums text-violet-700 dark:text-violet-200"
                 >
                   {tasks}
                 </motion.span>
               </div>
             </div>
-            <div className="text-right text-[10px] text-muted-foreground">
-              <div className="font-semibold text-foreground">{focus} min</div>
+            <div className="text-right text-[10px] text-muted">
+              <div className="fw-semibold text-body">{focus} min</div>
               <div>concentration saisie</div>
             </div>
           </div>

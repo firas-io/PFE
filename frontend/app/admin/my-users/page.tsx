@@ -1,16 +1,9 @@
-import { Suspense } from 'react';
-import { MyUserList } from './_components/MyUserList';
+import { MyUsers } from './_components/MyUsers';
 
 export const metadata = {
-  title: 'Mes Utilisateurs | HabitFlow',
+  title: 'Mon équipe | HabitFlow',
 };
 
-const MyUsersPage = async () => (
-  <div className="container-fluid">
-    <Suspense>
-      <MyUserList />
-    </Suspense>
-  </div>
-);
-
-export default MyUsersPage;
+export default function MyUsersPage() {
+  return <MyUsers />;
+}

@@ -1,18 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-@import "tailwindcss";
-@import "tw-animate-css";
-
-:root {
-  --background: #F0F0FA;
-  --foreground: #1E1B4B;
-  --accent: #4338CA;
-  --accent-soft: #EEF2FF;
-  --accent-dark: #3730a3;
-  --border-soft: #E5E7EB;
-  --section-gap: 1.5rem;
-  --radius-card: 1rem;
-}
-
 html {
   height: 100%;
 }

@@ -6,6 +6,13 @@ import StreaksService   from "@/modules/streaks/streaks.service.js";
 
 function _startOfDay(date) { const d = new Date(date); d.setHours(0, 0, 0, 0);          return d; }
 function _endOfDay(date)   { const d = new Date(date); d.setHours(23, 59, 59, 999);      return d; }
+function _startOfWeekMonday(date) {
+  const d = _startOfDay(date);
+  const day = d.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  d.setDate(d.getDate() - diffToMonday);
+  return d;
+}
 
 function _dayKey(date) {
   const d = new Date(date);
@@ -71,9 +78,8 @@ export async function getMyProgress(userId) {
   const todayCompleted = todayLogs.filter(l => l.statut === "completee").length;
   const todayRate     = todayLogs.length ? Number(((todayCompleted / todayLogs.length) * 100).toFixed(1)) : 0;
 
-  const weekStart = _startOfDay(new Date());
-  weekStart.setDate(weekStart.getDate() - 6);
-  const weekEnd  = _endOfDay(new Date());
+  const weekStart = _startOfWeekMonday(new Date());
+  const weekEnd = _endOfDay(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6));
   const weekLogs = logs.filter(l => l.date >= weekStart && l.date <= weekEnd);
   const perDay   = new Map();
 

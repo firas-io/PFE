@@ -57,19 +57,13 @@ export const ManagerList = () => {
   }
 
   return (
-    <>
-      <div className="mb-3">
-        <h2 className="h3 mb-1 text-primary">Gestion des Managers</h2>
-        <div className="text-secondary small">Créez et gérez les comptes managers</div>
-      </div>
-
-      {error && <div className="alert alert-danger">{error}</div>}
+    <div className="adm-page">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
 
       <ManagerHeader
         total={managers.length}
         loading={loading}
         onOpenCreate={() => setShowAddModal(true)}
-        onRefresh={refresh}
       />
 
       <ManagerTable managers={managers} onRefetch={refresh} />
@@ -79,6 +73,6 @@ export const ManagerList = () => {
         onHide={() => setShowAddModal(false)}
         onSuccess={refresh}
       />
-    </>
+    </div>
   );
 };

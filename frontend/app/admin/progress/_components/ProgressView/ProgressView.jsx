@@ -42,15 +42,17 @@ export const ProgressView = () => {
   }
 
   return (
-    <div>
-      <div className="d-flex align-items-center justify-content-between mb-3">
+    <div className="adm-page">
+      <div className="adm-header">
         <div>
-          <h2 className="h3 mb-1 text-primary">Mon Avancement</h2>
-          <div className="text-secondary small">Suivi de vos habitudes et progression quotidienne.</div>
+          <h1 className="adm-title">Mon Avancement</h1>
+          <p className="adm-subtitle">Suivi de vos habitudes et progression quotidienne.</p>
         </div>
-        <button className="btn btn-outline-primary" type="button" onClick={refresh} disabled={loading}>
-          {loading ? 'Mise à jour...' : 'Actualiser'}
-        </button>
+        <div className="adm-header-actions">
+          <button className="btn btn-outline-secondary" type="button" onClick={refresh} disabled={loading}>
+            {loading ? 'Mise à jour...' : 'Actualiser'}
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}

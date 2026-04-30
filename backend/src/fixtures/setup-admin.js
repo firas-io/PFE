@@ -3,19 +3,22 @@ import { Users } from "@/modules/users/models/User.model.js";
 import { Roles } from "@/modules/roles/models/Role.model.js";
 import { SYSTEM_ARCHIVED_USER_ID } from "@/modules/users/constants/users.constants.js";
 
-/** Admin: managers CRUD + read-only team rosters — no global USERS_* / ALL. */
 const ADMIN_PERMISSIONS = [
   "MANAGERS_MANAGE",
   "MANAGER_TEAM_VIEW",
+  "MANAGER_USERS_VIEW", "MANAGER_USERS_MANAGE",
+  "ROLES_VIEW", "ROLES_MANAGE",
+  "USERS_VIEW", "USERS_MANAGE",
   "HABITS_VIEW", "HABITS_CREATE", "HABITS_MANAGE",
   "LOGS_VIEW", "LOGS_MANAGE",
   "STATS_VIEW", "STATS_MANAGE",
-  "ONBOARDING_VIEW",
-  "REMINDERS_VIEW",
-  "SESSIONS_VIEW",
+  "ONBOARDING_VIEW", "ONBOARDING_MANAGE",
+  "REMINDERS_VIEW", "REMINDERS_MANAGE",
+  "SESSIONS_VIEW", "SESSIONS_MANAGE",
   "ADMIN_STATS_VIEW",
-  "OFF_DAYS_MANAGE",
+  "OFFDAYS_VIEW", "OFF_DAYS_MANAGE",
   "TICKETS_MANAGE",
+  "CATEGORIES_VIEW", "CATEGORIES_MANAGE",
 ];
 
 const DEFAULT_ROLES = [
@@ -87,8 +90,9 @@ export async function setupAdmin(fastify) {
       }
     }
 
-    // Align default role permissions on each boot (removes legacy drift from DB).
-    await Roles.updateOne(
+    // Align default role permissions on each boot — use the returned document directly
+    // to avoid any ambiguity from a subsequent findOne in a dirty-state collection.
+    const adminRole = await Roles.updateOne(
       { nom: "admin" },
       { $set: { permissions: ADMIN_PERMISSIONS, description: "Gestion des managers, consultation des équipes, pilotage applicatif" } }
     );
@@ -96,14 +100,11 @@ export async function setupAdmin(fastify) {
       { nom: "manager" },
       { $set: { permissions: MANAGER_PERMISSIONS, description: "Responsable d'équipe — gère ses propres utilisateurs" } }
     );
-    await Roles.updateOne(
+    const userRole = await Roles.updateOne(
       { nom: "utilisateur" },
       { $set: { permissions: USER_PERMISSIONS, description: "Utilisateur standard" } }
     );
     fastify.log.info("Admin role permissions synchronized.");
-
-    const adminRole = await Roles.findOne({ nom: "admin" });
-    const userRole  = await Roles.findOne({ nom: "utilisateur" });
 
     if (!adminRole || !userRole) {
       fastify.log.error("Default roles could not be created.");

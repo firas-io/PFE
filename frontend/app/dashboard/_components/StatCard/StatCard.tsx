@@ -14,18 +14,18 @@ export function StatCard({ title, value, description, icon: Icon }: StatCardProp
   return (
     <div
       className={cn(
-        "rounded-2xl border border-border/60 bg-card p-6 shadow-lg transition-all duration-200",
+        "rounded-5 border border-border/60 bg-white p-6 shadow-lg transition-all-custom duration-200",
         "hover:-translate-y-0.5 hover:shadow-xl"
       )}
     >
-      <div className="mb-5 flex items-start justify-between gap-3">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <span className="inline-flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+      <div className="mb-5 d-flex align-items-start justify-content-between gap-3">
+        <p className="text-sm fw-medium text-muted">{title}</p>
+        <span className="d-inline-flex h-11 w-11 align-items-center justify-content-center rounded-4 bg-primary/10 text-primary">
           <Icon className="h-5 w-5" />
         </span>
       </div>
-      <p className="text-4xl font-bold leading-none tracking-tight text-foreground">{value}</p>
-      {description ? <p className="mt-3 text-sm text-muted-foreground">{description}</p> : null}
+      <p className="text-4xl fw-bold lh-1 tracking-tight text-body">{value}</p>
+      {description ? <p className="mt-3 text-sm text-muted">{description}</p> : null}
     </div>
   );
 }

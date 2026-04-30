@@ -1,6 +1,5 @@
 import { CategoryTickets } from "../models/CategoryTicket.model.js";
 import { Users }           from "@/modules/users/models/User.model.js";
-import { Roles }           from "@/modules/roles/models/Role.model.js";
 import { Habits }          from "@/modules/habits/models/Habit.model.js";
 import { AppError }        from "@/core/errors.js";
 import logger              from "@/utils/logger.util.js";
@@ -16,7 +15,7 @@ class CategoryTicketsService {
     return CategoryTickets.find({ user_id: userId }, { sort: { createdAt: -1 } });
   }
 
-  static async create(body, userId) {
+  static async create(body, userId, userRole) {
     const { title, description, proposed_category_name, scope = "personal" } = body;
     if (!title) throw new AppError("title est requis", 400, "TKT-001");
 
@@ -25,9 +24,7 @@ class CategoryTicketsService {
       throw new AppError("scope doit être 'personal' ou 'team'", 400, "TKT-007");
 
     if (scope === "team") {
-      const user = await Users.findById(userId);
-      const role = user?.role_id ? await Roles.findById(user.role_id) : null;
-      if (!role || role.name !== "manager")
+      if (userRole !== "manager")
         throw new AppError("Seuls les managers peuvent créer des tickets pour l'équipe", 403, "TKT-008");
     }
 
@@ -106,7 +103,7 @@ class CategoryTicketsService {
 
     // If approved, propagate the validated category label to habits and push to user(s).
     if (status === "done") {
-      const approvedName = String(admin_note || ticket.proposed_category_name || "").trim();
+      const approvedName = String(admin_note || ticket.proposed_category_name || ticket.title || "").trim();
       if (approvedName) {
         await Habits.updateMany(
           { categorie_ticket_id: id },

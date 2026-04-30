@@ -35,57 +35,27 @@ export const Actions = ({ habit, onEdit, onRefetch }) => {
 
   return (
     <>
-      <div className="btn-list flex-nowrap">
-        <button
-          className="btn btn-sm btn-icon btn-primary"
-          type="button"
-          title="Modifier"
-          onClick={() => onEdit(habit)}
-        >
-          <IconEdit size={16} />
+      <div className="adm-actions">
+        <button className="adm-btn-icon" type="button" title="Modifier" onClick={() => onEdit(habit)}>
+          <IconEdit size={15} />
         </button>
-        <button
-          className="btn btn-sm btn-icon btn-secondary"
-          type="button"
-          title="Cloner"
-          onClick={handleClone}
-        >
-          <IconCopy size={16} />
+        <button className="adm-btn-icon" type="button" title="Cloner" onClick={handleClone}>
+          <IconCopy size={15} />
         </button>
         {habit.statut === 'pause' ? (
-          <button
-            className="btn btn-sm btn-icon btn-success"
-            type="button"
-            title="Réactiver"
-            onClick={() => handleStatus('active')}
-          >
-            <IconPlayerPlay size={16} />
+          <button className="adm-btn-icon adm-btn-icon--success" type="button" title="Réactiver" onClick={() => handleStatus('active')}>
+            <IconPlayerPlay size={15} />
           </button>
         ) : (
-          <button
-            className="btn btn-sm btn-icon btn-warning"
-            type="button"
-            title="Mettre en pause"
-            onClick={() => handleStatus('pause')}
-          >
-            <IconPlayerPause size={16} />
+          <button className="adm-btn-icon adm-btn-icon--warn" type="button" title="Mettre en pause" onClick={() => handleStatus('pause')}>
+            <IconPlayerPause size={15} />
           </button>
         )}
-        <button
-          className="btn btn-sm btn-icon btn-warning"
-          type="button"
-          title="Archiver"
-          onClick={() => setHabitToArchive(habit)}
-        >
-          <IconArchive size={16} />
+        <button className="adm-btn-icon adm-btn-icon--warn" type="button" title="Archiver" onClick={() => setHabitToArchive(habit)}>
+          <IconArchive size={15} />
         </button>
-        <button
-          className="btn btn-sm btn-icon btn-danger"
-          type="button"
-          title="Supprimer définitivement"
-          onClick={() => setHabitToDelete(habit)}
-        >
-          <IconTrash size={16} />
+        <button className="adm-btn-icon adm-btn-icon--danger" type="button" title="Supprimer" onClick={() => setHabitToDelete(habit)}>
+          <IconTrash size={15} />
         </button>
       </div>
 

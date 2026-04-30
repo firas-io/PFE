@@ -1,11 +1,9 @@
-import { NoteList } from './_components/NoteList';
+import { NotesTable } from './_components/NotesTable';
 
 export const metadata = {
-  title: 'Dashboard des Notes | HabitFlow',
+  title: 'Notes équipe | HabitFlow',
 };
 
-const AdminNotesPage = async () => {
-  return <NoteList />;
-};
-
-export default AdminNotesPage;
+export default function NotesPage() {
+  return <NotesTable />;
+}

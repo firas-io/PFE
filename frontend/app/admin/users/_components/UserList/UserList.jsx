@@ -79,71 +79,52 @@ export const UserList = () => {
   }
 
   return (
-    <>
-      <div className="mb-4">
-        <h2 className="h3 mb-1 text-primary">Utilisateurs par manager</h2>
-        <div className="text-secondary small">
-          Consultation seule : choisissez un manager pour voir les comptes utilisateurs qu&apos;il encadre.
-          La création et la modification des utilisateurs se font côté manager (menu « Mes utilisateurs »).
+    <div className="adm-page">
+      <div className="adm-header">
+        <div>
+          <h1 className="adm-title">Utilisateurs par manager</h1>
+          <p className="adm-subtitle">Consultez les équipes par manager</p>
         </div>
       </div>
 
-      {error && <div className="alert alert-danger">{error}</div>}
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
 
       <div className="card">
-        <div className="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
-          <h5 className="mb-0">
-            Équipe
-            {selectedManagerId ? (
-              <span className="badge bg-secondary ms-1">{users.length}</span>
-            ) : null}
-          </h5>
-          <div className="d-flex align-items-center gap-2">
-            <label className="text-secondary small mb-0" htmlFor="manager-filter">
-              Manager :
-            </label>
-            <select
-              id="manager-filter"
-              className="form-select form-select-sm"
-              style={{ width: 260 }}
-              value={selectedManagerId}
-              onChange={(e) => handleManagerFilter(e.target.value)}
-              disabled={managersLoading}
-            >
-              <option value="">— Choisir un manager —</option>
-              {managers.map((m) => (
-                <option key={m._id} value={m._id}>
-                  {m.prenom} {m.nom}
-                  {typeof m.managedUsersCount === 'number' ? ` (${m.managedUsersCount})` : ''}
-                </option>
-              ))}
-            </select>
-            <button
-              className="btn btn-outline-secondary btn-sm"
-              type="button"
-              onClick={() => {
-                refreshManagers();
-                if (selectedManagerId) refreshUsers(selectedManagerId);
-              }}
-              disabled={managersLoading || usersLoading}
-            >
-              <IconRefresh size={15} className="me-1" />
-              Actualiser
-            </button>
-          </div>
-        </div>
-        <div className="card-body p-0">
-          {!selectedManagerId ? (
-            <div className="text-secondary small p-4">
-              Sélectionnez un manager pour afficher son équipe.
-            </div>
-          ) : usersLoading ? (
-            <div className="text-secondary small p-3">Chargement…</div>
-          ) : (
-            <UserTable users={users} readOnly />
+        <div className="adm-toolbar">
+          <label className="text-secondary" style={{ fontSize: 13, flexShrink: 0 }} htmlFor="manager-filter">Manager :</label>
+          <select
+            id="manager-filter"
+            className="form-select"
+            style={{ maxWidth: 300 }}
+            value={selectedManagerId}
+            onChange={(e) => handleManagerFilter(e.target.value)}
+            disabled={managersLoading}
+          >
+            <option value="">— Choisir un manager —</option>
+            {managers.map((m) => (
+              <option key={m._id} value={m._id}>
+                {m.prenom} {m.nom}
+                {typeof m.managedUsersCount === 'number' ? ` (${m.managedUsersCount})` : ''}
+              </option>
+            ))}
+          </select>
+          {selectedManagerId && (
+            <span className="adm-status adm-status--review">{users.length} membre{users.length !== 1 ? 's' : ''}</span>
           )}
         </div>
+        {!selectedManagerId ? (
+          <div className="adm-empty">
+            <div className="adm-empty-icon">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <p>Sélectionnez un manager pour afficher son équipe.</p>
+          </div>
+        ) : usersLoading ? (
+          <div className="text-center py-4"><span className="spinner-border spinner-border-sm" /></div>
+        ) : (
+          <UserTable users={users} readOnly />
+        )}
       </div>
-    </>
+    </div>
   );
 };

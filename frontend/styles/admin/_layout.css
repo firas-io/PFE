@@ -2,21 +2,8 @@
    HabitFlow — Layout System (Admin + User)
    Design: White sidebar, light lavender background
    Primary: #4338CA (Indigo-700)
+   Variables: see styles/base/_variables.css
    ═══════════════════════════════════════════════════════ */
-
-:root {
-  --hf-primary:       #4338CA;
-  --hf-primary-light: #6366F1;
-  --hf-bg:            #F0F0FA;
-  --hf-sidebar-bg:    #FFFFFF;
-  --hf-topbar-bg:     #FFFFFF;
-  --hf-text:          #1E1B4B;
-  --hf-text-muted:    #64748B;
-  --hf-border:        #E5E7EB;
-  --hf-card:          #FFFFFF;
-  --hf-sidebar-w:     240px;
-  --hf-ease:          cubic-bezier(0.32, 0.72, 0, 1);
-}
 
 /* ═══════════════════════════════════════════════════════
    SHELLS
@@ -584,13 +571,21 @@
 
   .admin-sidebar,
   .user-sidebar {
-    transform: translateX(-100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: auto;
+    bottom: 0;
+    height: 100dvh;
+    width: min(86vw, var(--hf-sidebar-w));
+    transform: translate3d(-100%, 0, 0);
+    will-change: transform;
     box-shadow: none;
   }
 
   .admin-shell:not(.admin-shell--sidebar-collapsed) .admin-sidebar,
   .user-shell:not(.user-shell--sidebar-collapsed) .user-sidebar {
-    transform: translateX(0);
+    transform: translate3d(0, 0, 0);
     box-shadow: 4px 0 24px rgba(0,0,0,0.15);
   }
 

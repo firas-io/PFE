@@ -44,10 +44,19 @@ export const HabitList = () => {
     setUserCategories(u?.role === 'utilisateur' ? (u?.categories ?? []) : []);
   }, []);
 
-  // Enrich user category slugs with full metadata (label + color) for tab UI
+  // Custom categories (approved via tickets, is_custom: true)
+  const customCategories = useMemo(
+    () => allCategories.filter(c => c.is_custom),
+    [allCategories]
+  );
+
+  // Enrich user category slugs with full metadata + append custom categories
   const userCategoryMeta = useMemo(
-    () => allCategories.filter((c) => userCategories.includes(c.slug)),
-    [allCategories, userCategories]
+    () => [
+      ...allCategories.filter(c => userCategories.includes(c.slug)),
+      ...customCategories,
+    ],
+    [allCategories, userCategories, customCategories]
   );
 
   const loadHabits = useCallback(async () => {
@@ -115,12 +124,21 @@ export const HabitList = () => {
   const filteredHabits = useMemo(() => {
     let items = habits;
 
-    // Category tab filter: specific category selected → show only that one.
-    // No specific tab → restrict to user's onboarding categories (if set).
+    // Category tab filter
     if (categoryFilter !== 'all') {
-      items = items.filter((h) => h.categorie === categoryFilter);
+      // Custom category tabs filter by ticket_id, normal tabs by categorie slug
+      const isCustomSlug = customCategories.some(c => c.slug === categoryFilter);
+      if (isCustomSlug) {
+        items = items.filter(h => h.categorie_ticket_id === categoryFilter);
+      } else {
+        items = items.filter(h => h.categorie === categoryFilter);
+      }
     } else if (userCategories.length > 0) {
-      items = items.filter((h) => userCategories.includes(h.categorie));
+      // Show onboarding-category habits + custom-category habits (categorie_ticket_id set)
+      items = items.filter(h =>
+        userCategories.includes(h.categorie) ||
+        (h.categorie === 'autre' && !!h.categorie_ticket_id)
+      );
     }
 
     if (statusFilter !== 'all') items = items.filter((h) => h.statut === statusFilter);
@@ -258,11 +276,11 @@ export const HabitList = () => {
   };
 
   return (
-    <div className="mx-auto w-full max-w-7xl space-y-6">
+    <div className="mx-auto w-100 max-w-7xl space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Mes habitudes</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Gérez, suivez et améliorez vos habitudes au quotidien.</p>
+        <h1 className="fs-2 fw-bold tracking-tight text-body">Mes habitudes</h1>
+        <p className="mt-1 text-sm text-muted">Gérez, suivez et améliorez vos habitudes au quotidien.</p>
       </div>
 
       <div className="card-elevated overflow-hidden">

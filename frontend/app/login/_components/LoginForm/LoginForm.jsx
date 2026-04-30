@@ -72,12 +72,13 @@ export const LoginForm = () => {
       if (data.refreshToken) setRefreshToken(data.refreshToken);
       setUser(data.user ?? null);
 
-      if (data.isFirstLogin || data.onboardingPending) {
+      const role = (data.user?.role ?? '').toString().toLowerCase();
+      // Admin and manager skip onboarding — go straight to the admin panel
+      if (role !== 'admin' && role !== 'manager' && (data.isFirstLogin || data.onboardingPending)) {
         router.push('/onboarding');
         return;
       }
-      const role = data.user?.role;
-      router.push(role === 'admin' ? '/admin' : role === 'manager' ? '/admin/my-users' : '/dashboard/home');
+      router.push(role === 'admin' || role === 'manager' ? '/admin' : '/dashboard/home');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion');
     } finally {

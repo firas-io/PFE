@@ -70,6 +70,10 @@ class AdminStatsService {
   }
 
   static async getLast12Weeks() {
+    const existing = await AdminStats.find({ period: "week" }, { sort: { week_start: -1 }, limit: 1 });
+    if (!existing || existing.length === 0) {
+      try { await AdminStatsService.generate(); } catch (_) { /* ignore if no data yet */ }
+    }
     return AdminStats.find({ period: "week" }, { sort: { week_start: -1 }, limit: 12 });
   }
 }

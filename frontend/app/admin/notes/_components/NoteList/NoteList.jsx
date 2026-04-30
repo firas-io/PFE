@@ -65,19 +65,11 @@ export const NoteList = () => {
   }
 
   return (
-    <div className="container-fluid py-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h1 className="h3 mb-1">Dashboard des Notes</h1>
-          <p className="text-secondary mb-0">
-            Consultez l&apos;historique des notes de votre équipe
-          </p>
-        </div>
-      </div>
-
-      {error && <div className="alert alert-danger">{error}</div>}
+    <div className="adm-page">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
 
       <NoteHeader search={search} onSearch={handleSearch} />
+
       <NoteTable
         notes={notes}
         loading={loading}
@@ -86,9 +78,11 @@ export const NoteList = () => {
         onPageChange={setPage}
       />
 
-      <div className="mt-3 small text-secondary">
-        Affichage de {(page - 1) * 20 + 1} à {Math.min(page * 20, pagination.total)} sur {pagination.total} notes
-      </div>
+      {pagination.total > 0 && (
+        <div className="mt-2 text-secondary" style={{ fontSize: 12 }}>
+          Affichage de {(page - 1) * 20 + 1}–{Math.min(page * 20, pagination.total)} sur {pagination.total} notes
+        </div>
+      )}
     </div>
   );
 };

@@ -11,14 +11,23 @@ function dayKey(value) {
 
 const MONTHS_FR = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
+const CHECK_ICON = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+    <path d="m20 6-11 11-5-5" strokeLinecap="round"/>
+  </svg>
+);
+const X_ICON = (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3">
+    <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round"/>
+  </svg>
+);
+
 export const CalendarView = () => {
   const [loading,      setLoading]      = useState(false);
   const [error,        setError]        = useState(null);
   const [currentMonth, setCurrentMonth] = useState(() => { const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), 1); });
   const [selectedDate, setSelectedDate] = useState(() => dayKey(new Date()));
   const [hoveredDate,  setHoveredDate]  = useState(null);
-  const [days,         setDays]         = useState([]);
-  const [habits,       setHabits]       = useState([]);
   const [allHabits,    setAllHabits]    = useState([]);
   const [allLogs,      setAllLogs]      = useState([]);
 
@@ -36,8 +45,6 @@ export const CalendarView = () => {
       setLoading(true); setError(null);
       const payload = await apiFetch(`/progress/calendar?date=${encodeURIComponent(isoDate)}`);
       setSelectedDate(payload.selectedDate);
-      setDays(payload.days);
-      setHabits(payload.habits);
       setAllHabits(payload.allHabits || payload.habits.map(h => ({ _id: h._id, nom: h.nom, statut: h.statut })));
       setAllLogs(payload.allLogs || []);
     } catch (err) {
@@ -58,11 +65,11 @@ export const CalendarView = () => {
 
   const calendarCells = useMemo(() => {
     const cells = [];
-    const first  = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-    const start  = first.getDay(); // 0=Sun
+    const first = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+    const start = first.getDay();
     for (let i = 0; i < start; i++) cells.push(null);
-    const days = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
-    for (let d = 1; d <= days; d++) cells.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d));
+    const daysInMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0).getDate();
+    for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(currentMonth.getFullYear(), currentMonth.getMonth(), d));
     return cells;
   }, [currentMonth]);
 
@@ -106,73 +113,67 @@ export const CalendarView = () => {
     } finally { setCatchupLoading(false); }
   };
 
-  // Selected day habits
-  const activeDate  = hoveredDate || selectedDate;
-  const dayLogs     = habitLogsMap[activeDate] || {};
-  const dayHabits   = allHabits.map(h => ({ ...h, log: dayLogs[String(h._id)] || null }));
-  const dayDone     = dayHabits.filter(h => h.log?.statut === 'completee').length;
-  const dayPct      = dayHabits.length > 0 ? Math.round((dayDone / dayHabits.length) * 100) : 0;
+  const activeDate = hoveredDate || selectedDate;
+  const dayLogs    = habitLogsMap[activeDate] || {};
+  const dayHabits  = allHabits.map(h => ({ ...h, log: dayLogs[String(h._id)] || null }));
+  const dayDone    = dayHabits.filter(h => h.log?.statut === 'completee').length;
+  const dayPct     = dayHabits.length > 0 ? Math.round((dayDone / dayHabits.length) * 100) : 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-      {/* ── Stats bar ─────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
-        {[
-          { label: 'COMPLETION RATE', value: `${dayPct}%`, color: '#059669' },
-          { label: 'ACTIVE HABITS',   value: String(allHabits.length), color: '#4338CA' },
-          { label: 'SELECTED DAY',    value: dayDone + ' done', color: '#7C3AED' },
-        ].map(s => (
-          <div key={s.label} style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', padding: '14px 16px' }}>
-            <p style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', margin: '0 0 4px' }}>{s.label}</p>
-            <p style={{ fontSize: 24, fontWeight: 900, color: s.color, margin: 0, letterSpacing: '-0.5px' }}>{s.value}</p>
-          </div>
-        ))}
-        {/* Log retroactif */}
-        <div style={{ background: '#fff', borderRadius: 14, border: '1px solid #E5E7EB', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <p style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>RATTRAPER</p>
+      {/* Stats bar */}
+      <div className="cal-stats">
+        <div className="cal-stat-card">
+          <p className="cal-stat-label">Completion</p>
+          <p className="cal-stat-value cal-stat-value--green">{dayPct}%</p>
+        </div>
+        <div className="cal-stat-card">
+          <p className="cal-stat-label">Habitudes</p>
+          <p className="cal-stat-value cal-stat-value--indigo">{allHabits.length}</p>
+        </div>
+        <div className="cal-stat-card">
+          <p className="cal-stat-label">Ce jour</p>
+          <p className="cal-stat-value cal-stat-value--purple">{dayDone} fait{dayDone !== 1 ? "s" : ""}</p>
+        </div>
+        <div className="cal-stat-card">
+          <p className="cal-stat-label">Rattraper</p>
           <input
             type="date"
             disabled={catchupLoading}
             onChange={e => { if (e.target.value) loadIncomplete(e.target.value); }}
-            style={{ fontSize: 12, border: '1px solid #E5E7EB', borderRadius: 8, padding: '5px 8px', color: '#374151', fontFamily: 'inherit', cursor: 'pointer' }}
+            className="cal-catchup-input"
           />
         </div>
       </div>
 
-      {error && (
-        <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#DC2626' }}>
-          {error}
-        </div>
-      )}
+      {error && <div className="cal-error">{error}</div>}
 
-      {/* ── Main grid ─────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 16, alignItems: 'start' }}>
+      {/* Main layout */}
+      <div className="cal-layout">
 
-        {/* Calendar */}
-        <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: '20px' }}>
-          {/* Month header */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-            <h2 style={{ fontSize: 18, fontWeight: 800, color: '#1E1B4B', margin: 0 }}>
+        {/* Calendar panel */}
+        <div className="cal-main">
+          <div className="cal-month-header">
+            <h2 className="cal-month-title">
               {MONTHS_FR[currentMonth.getMonth()]} {currentMonth.getFullYear()}
             </h2>
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div className="cal-nav">
               <button
-                onClick={() => setCurrentMonth(p => new Date(p.getFullYear(), p.getMonth()-1, 1))}
-                style={{ border: '1px solid #E5E7EB', background: '#fff', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => setCurrentMonth(p => new Date(p.getFullYear(), p.getMonth() - 1, 1))}
+                className="cal-nav-btn"
               >‹</button>
               <button
-                onClick={() => setCurrentMonth(p => new Date(p.getFullYear(), p.getMonth()+1, 1))}
-                style={{ border: '1px solid #E5E7EB', background: '#fff', borderRadius: 8, width: 30, height: 30, cursor: 'pointer', fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                onClick={() => setCurrentMonth(p => new Date(p.getFullYear(), p.getMonth() + 1, 1))}
+                className="cal-nav-btn"
               >›</button>
             </div>
           </div>
 
-          {/* Legend */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 12, fontSize: 11, color: '#64748B' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669' }}/> 100%</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#F59E0B' }}/> 50%</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: '#EF4444' }}/> Missed</span>
+          <div className="cal-legend">
+            <span className="cal-legend-item"><span className="cal-legend-dot cal-legend-dot--done" /> 100%</span>
+            <span className="cal-legend-item"><span className="cal-legend-dot cal-legend-dot--partial" /> Partiel</span>
+            <span className="cal-legend-item"><span className="cal-legend-dot cal-legend-dot--missed" /> Manqué</span>
           </div>
 
           <CalendarGrid
@@ -187,60 +188,42 @@ export const CalendarView = () => {
           />
         </div>
 
-        {/* Right panel — day detail */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {/* Right panel */}
+        <div className="cal-right">
 
           {/* Day header */}
-          <div style={{ background: '#4338CA', borderRadius: 16, padding: '16px' }}>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.7)', fontWeight: 600, margin: '0 0 4px', textTransform: 'capitalize' }}>
-              {selectedLabel}
-            </p>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', margin: 0 }}>
-              {dayDone}/{dayHabits.length} habitudes complétées
-            </p>
+          <div className="cal-day-header">
+            <p className="cal-day-header-label">{selectedLabel}</p>
+            <p className="cal-day-header-count">{dayDone}/{dayHabits.length} habitudes complétées</p>
             {dayHabits.length > 0 && (
-              <div style={{ height: 4, background: 'rgba(255,255,255,0.2)', borderRadius: 4, marginTop: 10, overflow: 'hidden' }}>
-                <div style={{ height: '100%', width: `${dayPct}%`, background: '#fff', borderRadius: 4, transition: 'width 0.5s' }}/>
+              <div className="cal-day-progress-track">
+                <div className="cal-day-progress-fill" style={{ width: `${dayPct}%` }} />
               </div>
             )}
           </div>
 
-          {/* Habit list for day */}
-          <div style={{ background: '#fff', borderRadius: 16, border: '1px solid #E5E7EB', padding: '16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1E1B4B', margin: 0 }}>Détails du jour</h3>
+          {/* Habit list */}
+          <div className="cal-habits-panel">
+            <h3 className="cal-habits-panel-title">Détails du jour</h3>
             {dayHabits.length === 0 ? (
-              <p style={{ fontSize: 12, color: '#9CA3AF', textAlign: 'center', padding: '16px 0' }}>Aucune habitude</p>
-            ) : (
-              dayHabits.slice(0, 6).map(h => {
-                const done    = h.log?.statut === 'completee';
-                const missed  = h.log && h.log.statut !== 'completee';
-                return (
-                  <div key={String(h._id)} style={{
-                    display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px',
-                    borderRadius: 10,
-                    background: done ? '#F0FDF4' : missed ? '#FEF2F2' : '#F9FAFB',
-                    border: `1px solid ${done ? '#BBF7D0' : missed ? '#FECACA' : '#F3F4F6'}`,
-                  }}>
-                    <div style={{
-                      width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
-                      background: done ? '#059669' : missed ? '#EF4444' : '#E5E7EB',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
-                      {done  ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="m20 6-11 11-5-5" strokeLinecap="round"/></svg> : null}
-                      {missed ? <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="M18 6 6 18M6 6l12 12" strokeLinecap="round"/></svg> : null}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontSize: 12, fontWeight: 600, color: '#374151', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.nom}</p>
-                      {h.log?.notes && (
-                        <p style={{ fontSize: 11, color: '#64748B', margin: '2px 0 0', fontStyle: 'italic', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          &ldquo;{h.log.notes}&rdquo;
-                        </p>
-                      )}
-                    </div>
+              <p className="cal-habits-empty">Aucune habitude</p>
+            ) : dayHabits.slice(0, 6).map(h => {
+              const done   = h.log?.statut === 'completee';
+              const missed = h.log && h.log.statut !== 'completee';
+              const variant = done ? 'done' : missed ? 'missed' : 'neutral';
+              return (
+                <div key={String(h._id)} className={`cal-habit-row cal-habit-row--${variant}`}>
+                  <div className={`cal-habit-icon cal-habit-icon--${variant}`}>
+                    {done   && CHECK_ICON}
+                    {missed && X_ICON}
                   </div>
-                );
-              })
-            )}
+                  <div className="cal-habit-name">
+                    <p>{h.nom}</p>
+                    {h.log?.notes && <p className="cal-habit-notes">&ldquo;{h.log.notes}&rdquo;</p>}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

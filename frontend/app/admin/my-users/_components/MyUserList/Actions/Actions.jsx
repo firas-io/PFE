@@ -35,22 +35,22 @@ export const Actions = ({ user, onRefetch }) => {
 
   return (
     <>
-      <div className="btn-list flex-nowrap">
+      <div className="adm-actions">
         <button
-          className="btn btn-sm btn-icon btn-primary"
+          className="adm-btn-icon"
           type="button"
           title="Modifier"
           onClick={() => setUserToEdit(user)}
         >
-          <IconEdit size={16} />
+          <IconEdit size={15} />
         </button>
         <button
-          className="btn btn-sm btn-icon btn-warning"
+          className="adm-btn-icon adm-btn-icon--warn"
           type="button"
           title={user.isActive ? 'Désactiver' : 'Réactiver'}
           onClick={() => setConfirmStatus({ nextIsActive: !user.isActive })}
         >
-          <IconUserOff size={16} />
+          <IconUserOff size={15} />
         </button>
       </div>
 

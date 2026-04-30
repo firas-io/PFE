@@ -20,30 +20,30 @@ export default function FinanceLayout(props: HabitsLayoutProps) {
     <DefaultLayout
       {...props}
       beforeFields={
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="d-grid gap-3 sm:grid-cols-2">
           <div
-            className="rounded-xl border p-4 shadow-inner"
+            className="rounded-4 border p-4 shadow-inner"
             style={{
               borderColor: `${stroke}55`,
               background: `linear-gradient(135deg, ${stroke}18, transparent)`,
             }}
           >
-            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="d-flex align-items-center gap-2 text-[10px] fw-semibold text-uppercase tracking-wide text-muted">
               <Euro className="h-3.5 w-3.5" aria-hidden />
               Montant
             </div>
             <p
-              className="mt-2 text-3xl font-black tabular-nums"
+              className="mt-2 fs-2 font-black tabular-nums"
               style={{ color: stroke }}
             >
               {montant.toLocaleString("fr-FR", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} €
             </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
+            <p className="mt-1 text-[11px] text-muted">
               Type : {type || "—"} · tendance symbolique
             </p>
           </div>
-          <div className="min-w-0 rounded-xl border border-border/50 bg-muted/10 p-2">
-            <div className="h-24 w-full min-w-0">
+          <div className="min-w-0 rounded-4 border border-border/50 bg-muted/10 p-2">
+            <div className="h-24 w-100 min-w-0">
               <ResponsiveContainer width="100%" height={96} minWidth={0}>
                 <LineChart data={data} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
                   <YAxis hide />

@@ -1,0 +1,134 @@
+/*
+ * HabitFlow Design System — Dashboard Theme
+ * CSS custom properties for the dashboard UI.
+ * Variables scoped to :root & .hf-shell.
+ */
+
+:root,
+.hf-shell {
+  --background: #F0F0FA;
+  --foreground: #1E1B4B;
+  --card:       #FFFFFF;
+  --card-foreground: #1E1B4B;
+  --popover:    #FFFFFF;
+  --popover-foreground: #1E1B4B;
+
+  /* Brand: Indigo #4338CA */
+  --primary:          #4338CA;
+  --primary-foreground: #FFFFFF;
+  --primary-glow:     #7C3AED;
+  --primary-soft:     #EEF2FF;
+
+  --secondary:        #F1F5F9;
+  --secondary-foreground: #1E293B;
+  --muted:            #F1F5F9;
+  --muted-foreground: #64748B;
+  --accent:           #F5F3FF;
+  --accent-foreground: #4338CA;
+  --destructive:      #EF4444;
+  --destructive-foreground: #FFFFFF;
+
+  --success:          #10B981;
+  --success-foreground: #FFFFFF;
+  --warning:          #F59E0B;
+  --warning-foreground: #FFFFFF;
+  --info:             #3B82F6;
+  --info-foreground:  #FFFFFF;
+  --streak:           #F97316;
+  --streak-foreground: #FFFFFF;
+
+  --border:  #E9EBF4;
+  --input:   #E9EBF4;
+  --ring:    #6366F1;
+  --radius:  0.85rem;
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, #6366F1, #8B5CF6);
+  --gradient-soft:    linear-gradient(135deg, #EEF2FF, #F5F3FF);
+  --gradient-hero:
+    radial-gradient(at 20% 20%, rgba(99,102,241,0.18) 0px, transparent 50%),
+    radial-gradient(at 80%  0%, rgba(139,92,246,0.18) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(59,130,246,0.12) 0px, transparent 50%);
+  --gradient-streak:  linear-gradient(135deg, #F97316, #EF4444);
+  --gradient-success: linear-gradient(135deg, #10B981, #14B8A6);
+
+  /* Shadows */
+  --shadow-sm:   0 1px 2px 0 rgba(30,27,75,0.04);
+  --shadow-md:   0 4px 16px -4px rgba(30,27,75,0.08);
+  --shadow-lg:   0 12px 32px -8px rgba(30,27,75,0.12);
+  --shadow-glow: 0 8px 28px -6px rgba(99,102,241,0.35);
+  --shadow-card: 0 1px 2px 0 rgba(30,27,75,0.04), 0 1px 1px 0 rgba(30,27,75,0.02);
+
+  /* Transition */
+  --ease-smooth:    cubic-bezier(0.32, 0.72, 0, 1);
+  --transition-base: all 0.25s var(--ease-smooth);
+}
+
+/* Dark mode */
+.hf-shell.dark,
+.user-shell--dark {
+  --background:       #0F0E1A;
+  --foreground:       #E0E7FF;
+  --card:             #1A1830;
+  --card-foreground:  #E0E7FF;
+  --primary:          #818CF8;
+  --primary-foreground: #0F0E1A;
+  --primary-glow:     #A78BFA;
+  --primary-soft:     #312E81;
+  --secondary:        #1E1B4B;
+  --secondary-foreground: #E0E7FF;
+  --muted:            #1E1B4B;
+  --muted-foreground: #818CF8;
+  --accent:           #312E81;
+  --accent-foreground: #C7D2FE;
+  --destructive:      #F87171;
+  --success:          #34D399;
+  --warning:          #FBBF24;
+  --info:             #60A5FA;
+  --streak:           #FB923C;
+  --border:           #2D2A5E;
+  --input:            #2D2A5E;
+  --ring:             #818CF8;
+  --shadow-sm:   0 1px 2px 0 rgba(0,0,0,0.3);
+  --shadow-md:   0 4px 16px -4px rgba(0,0,0,0.4);
+  --shadow-glow: 0 8px 28px -6px rgba(129,140,248,0.5);
+  --shadow-card: 0 1px 2px 0 rgba(0,0,0,0.3);
+  --gradient-primary: linear-gradient(135deg, #6366F1, #8B5CF6);
+  --gradient-soft:    linear-gradient(135deg, #1E1B4B, #2D2A5E);
+}
+
+/* ── Component classes ─────────────────────────────────── */
+.card-elevated {
+  background: var(--card);
+  border: 1px solid rgba(233, 235, 244, 0.6);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  transition: var(--transition-base);
+}
+.card-elevated:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.gradient-text {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  backdrop-filter: blur(20px);
+  background: rgba(240, 240, 250, 0.7);
+  border: 1px solid rgba(233, 235, 244, 0.6);
+}
+
+/* ── Gradient utility classes ─────────────────────────── */
+.bg-gradient-primary  { background: var(--gradient-primary); }
+.bg-gradient-soft     { background: var(--gradient-soft); }
+.bg-gradient-hero     { background: var(--gradient-hero); }
+.bg-gradient-streak   { background: var(--gradient-streak); }
+.bg-gradient-success  { background: var(--gradient-success); }
+
+/* ── Scrollbar utility ────────────────────────────────── */
+.scrollbar-none::-webkit-scrollbar { display: none; }
+.scrollbar-none { scrollbar-width: none; }

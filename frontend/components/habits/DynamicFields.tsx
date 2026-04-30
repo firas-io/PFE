@@ -52,7 +52,7 @@ export function DynamicFields({
 
   if (!fields.length) {
     if (loading && !fieldsProp?.length) {
-      return <p className="text-xs text-muted-foreground">Chargement des champs…</p>;
+      return <p className="text-xs text-muted">Chargement des champs…</p>;
     }
     return null;
   }
@@ -66,21 +66,21 @@ export function DynamicFields({
 
         if (readOnly) {
           return (
-            <div key={field.name} className="rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <div key={field.name} className="rounded-3 border/60 bg-muted/20 px-3 py-2">
+              <div className="text-[10px] fw-semibold text-uppercase tracking-wide text-muted">
                 {field.label}
                 {unitSuffix}
               </div>
-              <div className="mt-0.5 text-sm text-foreground">{formatDisplay(field, raw)}</div>
+              <div className="mt-0.5 text-sm text-body">{formatDisplay(field, raw)}</div>
             </div>
           );
         }
 
         return (
           <div key={field.name} className="space-y-1">
-            <label htmlFor={id} className="text-xs font-medium text-foreground">
+            <label htmlFor={id} className="text-xs fw-medium text-body">
               {field.label}
-              {field.unit ? <span className="text-muted-foreground"> ({field.unit})</span> : null}
+              {field.unit ? <span className="text-muted"> ({field.unit})</span> : null}
               {field.required ? <span className="text-destructive"> *</span> : null}
             </label>
 
@@ -89,8 +89,8 @@ export function DynamicFields({
                 id={id}
                 type="text"
                 className={cn(
-                  "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground",
-                  "placeholder:text-muted-foreground/60 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/25"
+                  "w-100 rounded-3 border bg-white px-3 py-2 text-sm text-body",
+                  "placeholder:text-muted-foreground/60"
                 )}
                 value={raw === undefined || raw === null ? "" : String(raw)}
                 onChange={(e) => set(field.name, e.target.value)}
@@ -105,8 +105,8 @@ export function DynamicFields({
                 type="number"
                 inputMode="decimal"
                 className={cn(
-                  "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground",
-                  "focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/25"
+                  "w-100 rounded-3 border bg-white px-3 py-2 text-sm text-body",
+                  "focus:border-primary"
                 )}
                 value={raw === undefined || raw === null ? "" : String(raw)}
                 onChange={(e) => {
@@ -125,8 +125,8 @@ export function DynamicFields({
                 inputMode="numeric"
                 min={0}
                 className={cn(
-                  "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground",
-                  "focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/25"
+                  "w-100 rounded-3 border bg-white px-3 py-2 text-sm text-body",
+                  "focus:border-primary"
                 )}
                 value={raw === undefined || raw === null ? "" : String(raw)}
                 onChange={(e) => {
@@ -140,16 +140,16 @@ export function DynamicFields({
             )}
 
             {field.type === "boolean" && (
-              <div className="flex items-center gap-2">
+              <div className="d-flex align-items-center gap-2">
                 <input
                   id={id}
                   type="checkbox"
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary/30"
+                  className="h-4 w-4 rounded text-primary"
                   checked={Boolean(raw)}
                   onChange={(e) => set(field.name, e.target.checked)}
                   disabled={disabled}
                 />
-                <span className="text-xs text-muted-foreground">Activé</span>
+                <span className="text-xs text-muted">Activé</span>
               </div>
             )}
 
@@ -157,8 +157,8 @@ export function DynamicFields({
               <select
                 id={id}
                 className={cn(
-                  "w-full rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground",
-                  "focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/25"
+                  "w-100 rounded-3 border bg-white px-3 py-2 text-sm text-body",
+                  "focus:border-primary"
                 )}
                 value={raw === undefined || raw === null ? "" : String(raw)}
                 onChange={(e) => set(field.name, e.target.value)}

@@ -171,7 +171,7 @@ class ManagersService {
     }
 
     const filter = { user_id: { $in: userIds } };
-    if (search) filter.note_text = { $regex: search, $options: "i" };
+    if (search) filter.new_note = { $regex: search, $options: "i" };
 
     const [data, total] = await Promise.all([
       HabitNoteHistories.find(filter, { sort: { createdAt: -1 }, skip, limit }),

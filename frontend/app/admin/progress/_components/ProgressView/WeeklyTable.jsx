@@ -4,9 +4,9 @@ import React from 'react';
 export const WeeklyTable = ({ weekly }) => {
   return (
     <div className="card mb-3">
-      <div className="card-header">Progression sur 7 jours</div>
+      <div className="card-header"><h3 className="card-title mb-0">Progression sur 7 jours</h3></div>
       <div className="table-responsive">
-        <table className="table table-vcenter card-table">
+        <table className="table card-table">
           <thead>
             <tr>
               <th>Jour</th>

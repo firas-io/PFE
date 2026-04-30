@@ -21,24 +21,24 @@ export default function SocialLayout(props: HabitsLayoutProps) {
     <DefaultLayout
       {...props}
       beforeFields={
-        <div className="flex flex-col gap-3 rounded-xl border border-pink-500/25 bg-pink-500/5 p-3 sm:flex-row sm:items-center">
-          <div className="flex flex-1 items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-pink-500/20 text-pink-600 dark:text-pink-300">
+        <div className="d-flex flex-column gap-3 rounded-4 border border-pink-500/25 bg-pink-500/5 p-3 flex-sm-row align-items-sm-center">
+          <div className="d-flex flex-fill align-items-center gap-3">
+            <div className="d-flex h-14 w-14 align-items-center justify-content-center rounded-5 bg-pink-500/20 text-pink-600 dark:text-pink-300">
               <Icon className="h-7 w-7" aria-hidden />
             </div>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+              <p className="text-[10px] fw-semibold text-uppercase tracking-wide text-muted">
                 Type d&apos;interaction
               </p>
-              <p className="text-sm font-bold text-foreground">{key || "—"}</p>
-              <p className="text-[11px] text-muted-foreground">{duree} min enregistrées</p>
+              <p className="text-sm fw-bold text-body">{key || "—"}</p>
+              <p className="text-[11px] text-muted">{duree} min enregistrées</p>
             </div>
           </div>
-          <div className="sm:w-40">
-            <p className="mb-1 text-[10px] font-medium text-muted-foreground">Fréquence (indicatif)</p>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
+          <div className="w-100">
+            <p className="mb-1 text-[10px] fw-medium text-muted">Fréquence (indicatif)</p>
+            <div className="h-2 overflow-hidden rounded-pill bg-light">
               <div
-                className="h-full rounded-full bg-pink-500 transition-all duration-500"
+                className="h-100 rounded-pill bg-pink-500 transition-all-custom duration-500"
                 style={{ width: `${freq}%` }}
               />
             </div>

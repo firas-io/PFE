@@ -16,6 +16,8 @@ export const UpdateHabitModal = ({ show, habit, onClose, onSuccess, allowedCateg
         nom: habit.nom ?? '',
         description: habit.description ?? '',
         categorie: habit.categorie ?? 'autre',
+        categorie_ticket_id: habit.categorie_ticket_id ?? undefined,
+        categorie_label: habit.categorie_label ?? undefined,
         categorie_autre_nom: habit.categorie_label ?? '',
         categorie_autre_description: '',
         categorie_champs: habit.categorie_champs && typeof habit.categorie_champs === 'object' ? { ...habit.categorie_champs } : {},
@@ -49,10 +51,10 @@ export const UpdateHabitModal = ({ show, habit, onClose, onSuccess, allowedCateg
         description: form.description,
         categorie: form.categorie,
         categorie_champs: form.categorie_champs || {},
-        categorie_label:
-          form.categorie === 'autre' && form.categorie_autre_nom?.trim()
-            ? form.categorie_autre_nom.trim()
-            : undefined,
+        categorie_label: form.categorie === 'autre'
+          ? (form.categorie_label || form.categorie_autre_nom?.trim() || undefined)
+          : undefined,
+        categorie_ticket_id: form.categorie_ticket_id || undefined,
         frequence: form.frequence,
         priorite: form.priorite,
         objectif_detail: form.objectif_detail,

@@ -15,15 +15,15 @@ export const HabitHeader = ({
 }) => (
   <div className="space-y-4 p-5 pb-0">
     {/* Top row */}
-    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="d-flex flex-column gap-3 flex-sm-row align-items-sm-center sm:justify-between">
       <div>
-        <h2 className="text-base font-bold text-foreground">Mes habitudes</h2>
-        <p className="text-xs text-muted-foreground mt-0.5">Filtrer, trier, modifier ou archiver vos habitudes.</p>
+        <h2 className="text-base fw-bold text-body">Mes habitudes</h2>
+        <p className="text-xs text-muted mt-0.5">Filtrer, trier, modifier ou archiver vos habitudes.</p>
       </div>
       <button
         type="button"
         onClick={onAdd}
-        className="inline-flex items-center gap-2 rounded-xl bg-gradient-primary px-4 py-2.5 text-sm font-semibold text-white shadow-glow transition-smooth hover:opacity-90 shrink-0"
+        className="d-inline-flex align-items-center gap-2 rounded-4 bg-gradient-primary px-4 py-2 text-sm fw-semibold text-white shadow-glow transition-smooth hover:opacity-90 flex-shrink-0"
       >
         <Plus className="h-4 w-4" />
         Nouvelle habitude
@@ -32,15 +32,15 @@ export const HabitHeader = ({
 
     {/* Category tabs (only rendered when user has onboarding categories) */}
     {userCategoryMeta.length > 0 && (
-      <div className="flex flex-wrap gap-2">
+      <div className="d-flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => onCategoryFilter('all')}
           className={cn(
-            'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
+            'rounded-pill border px-3.5 py-1.5 text-xs fw-semibold transition-all-custom',
             categoryFilter === 'all'
               ? 'border-primary bg-primary text-white shadow-sm'
-              : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
+              : 'border-border bg-white text-muted hover:border-primary/50 hover:text-foreground'
           )}
         >
           Toutes
@@ -53,10 +53,10 @@ export const HabitHeader = ({
               type="button"
               onClick={() => onCategoryFilter(active ? 'all' : cat.slug)}
               className={cn(
-                'rounded-full border px-3.5 py-1.5 text-xs font-semibold transition-all',
+                'rounded-pill border px-3.5 py-1.5 text-xs fw-semibold transition-all-custom',
                 active
                   ? 'border-transparent text-white shadow-sm'
-                  : 'border-border bg-card text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                  : 'border-border bg-white text-muted hover:border-primary/50 hover:text-foreground'
               )}
               style={active ? { backgroundColor: cat.color, borderColor: cat.color } : undefined}
             >
@@ -68,26 +68,28 @@ export const HabitHeader = ({
     )}
 
     {/* Filters row */}
-    <div className="flex flex-col gap-2 sm:flex-row pb-4">
+    <div className="d-flex flex-column gap-2 flex-sm-row pb-4">
       {/* Search */}
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+      <div className="position-relative flex-fill">
+        <Search className="position-absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pe-none" />
         <input
           type="text"
           value={search}
           onChange={(e) => onSearch(e.target.value)}
           placeholder="Titre, catégorie, priorité…"
-          className="w-full rounded-xl border border-border bg-card pl-9 pr-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-smooth"
+          className="form-control rounded-4 text-sm hf-focus transition-smooth"
+          style={{ paddingLeft: '2.25rem' }}
         />
       </div>
 
       {/* Status filter */}
-      <div className="relative shrink-0">
-        <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+      <div className="position-relative flex-shrink-0">
+        <SlidersHorizontal className="position-absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted pe-none" />
         <select
           value={statusFilter}
           onChange={(e) => onStatusFilter(e.target.value)}
-          className="appearance-none rounded-xl border border-border bg-card pl-9 pr-8 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-smooth cursor-pointer"
+          className="form-select rounded-4 text-sm hf-focus transition-smooth cursor-pointer"
+          style={{ paddingLeft: '2.25rem' }}
         >
           {STATUS_FILTERS.map((f) => (
             <option key={f.value} value={f.value}>{f.label}</option>
@@ -96,11 +98,11 @@ export const HabitHeader = ({
       </div>
 
       {/* Sort */}
-      <div className="shrink-0">
+      <div className="flex-shrink-0">
         <select
           value={sortBy}
           onChange={(e) => onSortBy(e.target.value)}
-          className="appearance-none rounded-xl border border-border bg-card px-3 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-smooth cursor-pointer"
+          className="form-select rounded-4 text-sm hf-focus transition-smooth cursor-pointer"
         >
           {SORT_OPTIONS.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
@@ -111,15 +113,15 @@ export const HabitHeader = ({
 
     {/* Active filter pills */}
     {(statusFilter !== 'all' || search.trim()) && (
-      <div className="flex flex-wrap gap-2 pb-2">
+      <div className="d-flex flex-wrap gap-2 pb-2">
         {statusFilter !== 'all' && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+          <span className="d-inline-flex align-items-center gap-1.5 rounded-pill bg-primary/10 px-2 py-1 text-xs fw-medium text-primary">
             Statut: {STATUS_FILTERS.find(f => f.value === statusFilter)?.label}
             <button onClick={() => onStatusFilter('all')} className="hover:text-primary/70">×</button>
           </span>
         )}
         {search.trim() && (
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
+          <span className="d-inline-flex align-items-center gap-1.5 rounded-pill bg-primary/10 px-2 py-1 text-xs fw-medium text-primary">
             Recherche: &quot;{search}&quot;
             <button onClick={() => onSearch('')} className="hover:text-primary/70">×</button>
           </span>

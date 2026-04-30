@@ -1,0 +1,32 @@
+/* ═══════════════════════════════════════════════════════
+   HabitFlow — Global CSS custom properties
+   Two namespaces (intentional):
+     --hf-*   → shell layout tokens (hex, direct use)
+     bare --* → Tailwind design-system tokens (HSL channels,
+                used as hsl(var(--name)) in dashboard)
+   ═══════════════════════════════════════════════════════ */
+
+:root {
+  /* ── App palette (hex) — used by admin + body styles ─── */
+  --background:   #F0F0FA;
+  --foreground:   #1E1B4B;
+  --accent:       #4338CA;
+  --accent-soft:  #EEF2FF;
+  --accent-dark:  #3730a3;
+  --border-soft:  #E5E7EB;
+  --section-gap:  1.5rem;
+  --radius-card:  1rem;
+
+  /* ── Shell layout tokens (admin + user layouts) ───────── */
+  --hf-primary:       #4338CA;
+  --hf-primary-light: #6366F1;
+  --hf-bg:            #F0F0FA;
+  --hf-sidebar-bg:    #FFFFFF;
+  --hf-topbar-bg:     #FFFFFF;
+  --hf-text:          #1E1B4B;
+  --hf-text-muted:    #64748B;
+  --hf-border:        #E5E7EB;
+  --hf-card:          #FFFFFF;
+  --hf-sidebar-w:     240px;
+  --hf-ease:          cubic-bezier(0.32, 0.72, 0, 1);
+}

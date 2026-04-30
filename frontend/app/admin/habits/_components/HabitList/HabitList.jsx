@@ -73,10 +73,8 @@ export const HabitList = () => {
   }, [habits, statusFilter, search, sortBy, searchParams]);
 
   return (
-    <>
-      <h2 className="mb-4">Gestion des Habitudes</h2>
-
-      {error && <div className="alert alert-danger">{error}</div>}
+    <div className="adm-page">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
 
       <HabitHeader
         statusFilter={statusFilter}
@@ -87,6 +85,7 @@ export const HabitList = () => {
         setSortBy={setSortBy}
         loading={loading}
         onOpenCreate={() => setShowAddModal(true)}
+        total={displayedHabits.length}
       />
 
       <HabitTable
@@ -110,7 +109,6 @@ export const HabitList = () => {
           selectedHabit={selectedHabit}
         />
       )}
-
-    </>
+    </div>
   );
 };

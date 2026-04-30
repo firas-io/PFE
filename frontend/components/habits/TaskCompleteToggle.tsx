@@ -26,10 +26,10 @@ export function TaskCompleteToggle({
       onClick={onToggle}
       disabled={disabled}
       className={cn(
-        "inline-flex items-center justify-center rounded-xl border-2 transition-all duration-200",
+        "d-inline-flex align-items-center justify-content-center rounded-4 border-2 transition-all-custom duration-200",
         checked
           ? "border-success/60 bg-success text-white shadow-glow"
-          : "border-border bg-card text-muted-foreground hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
+          : "border-border bg-white text-muted hover:border-primary/50 hover:bg-primary/5 hover:text-primary",
         "disabled:pointer-events-none disabled:opacity-40",
         className
       )}

@@ -47,28 +47,28 @@ export const Actions = ({ user, roles, onRefetch }) => {
 
   return (
     <>
-      <div className="btn-list flex-nowrap">
-        <button className="btn btn-sm btn-icon btn-primary" type="button" title="Modifier" onClick={() => setUserToEdit(user)}>
-          <IconEdit size={16} />
+      <div className="adm-actions">
+        <button className="adm-btn-icon" type="button" title="Modifier" onClick={() => setUserToEdit(user)}>
+          <IconEdit size={15} />
         </button>
-        <button className="btn btn-sm btn-icon btn-secondary" type="button" title="Rôle" onClick={() => setUserToEditRole(user)}>
-          <IconCircleCheck size={16} />
+        <button className="adm-btn-icon" type="button" title="Rôle" onClick={() => setUserToEditRole(user)}>
+          <IconCircleCheck size={15} />
         </button>
         <button
-          className="btn btn-sm btn-icon btn-warning"
+          className="adm-btn-icon adm-btn-icon--warn"
           type="button"
           title={user.isActive ? 'Désactiver' : 'Réactiver'}
           onClick={() => setConfirmState({ action: 'status', userId: user._id, nextIsActive: !user.isActive })}
         >
-          <IconUserOff size={16} />
+          <IconUserOff size={15} />
         </button>
         <button
-          className="btn btn-sm btn-icon btn-danger"
+          className="adm-btn-icon adm-btn-icon--danger"
           type="button"
           title="Supprimer"
           onClick={() => setConfirmState({ action: 'delete', userId: user._id })}
         >
-          <IconTrash size={16} />
+          <IconTrash size={15} />
         </button>
       </div>
 

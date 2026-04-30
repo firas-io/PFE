@@ -48,41 +48,41 @@ export default function DefaultLayout({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/60 bg-card shadow-soft",
+        "overflow-hidden rounded-5 border border-border/60 bg-white shadow-soft",
         "transition-shadow duration-300 hover:shadow-md"
       )}
     >
       <header
-        className="flex items-start gap-3 border-b border-border/50 bg-muted/15 px-4 py-3"
+        className="d-flex align-items-start gap-3 border-b border-border/50 bg-muted/15 px-4 py-3"
         style={{ borderLeftWidth: 4, borderLeftColor: cat.color }}
       >
         <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-white shadow-inner"
+          className="d-flex h-11 w-11 flex-shrink-0 align-items-center justify-content-center rounded-4 text-white shadow-inner"
           style={{ backgroundColor: cat.color }}
           aria-hidden
         >
           <Icon className="h-5 w-5" />
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-semibold text-foreground">{title}</h3>
+        <div className="min-w-0 flex-fill">
+          <div className="d-flex flex-wrap align-items-center gap-2">
+            <h3 className="text-truncate text-sm fw-semibold text-body">{title}</h3>
             <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white"
+              className="rounded-pill px-2 py-0.5 text-[10px] fw-bold text-uppercase tracking-wide text-white"
               style={{ backgroundColor: `${cat.color}cc` }}
             >
               {cat.label}
             </span>
             {habit.statut && habit.statut !== "active" && (
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+              <span className="rounded-pill bg-light px-2 py-0.5 text-[10px] fw-semibold text-muted">
                 {habit.statut}
               </span>
             )}
           </div>
           {cat.description && (
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{cat.description}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">{cat.description}</p>
           )}
           {habit.description && (
-            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground/90">{habit.description}</p>
+            <p className="mt-1 text-xs text-muted">{habit.description}</p>
           )}
         </div>
       </header>
@@ -101,8 +101,8 @@ export default function DefaultLayout({
           />
         </section>
         {habit.note && (
-          <div className="rounded-lg border border-border/50 bg-muted/10 px-3 py-2 text-xs text-muted-foreground">
-            <span className="font-semibold text-foreground">Note : </span>
+          <div className="rounded-3 border border-border/50 bg-muted/10 px-3 py-2 text-xs text-muted">
+            <span className="fw-semibold text-body">Note : </span>
             {habit.note}
           </div>
         )}
@@ -110,13 +110,13 @@ export default function DefaultLayout({
       </div>
 
       {showFooter ? (
-      <footer className="flex flex-wrap items-center justify-end gap-2 border-t border-border/50 bg-muted/10 px-3 py-2">
+      <footer className="d-flex flex-wrap align-items-center justify-content-end gap-2 border-t border-border/50 bg-muted/10 px-3 py-2">
         {onComplete && (
           <TaskCompleteToggle
             checked={false}
             onToggle={onComplete}
             disabled={disabled}
-            className="h-8 w-8 rounded-lg"
+            className="h-8 w-8 rounded-3"
             ariaLabel="Marquer comme complétée"
           />
         )}
@@ -125,7 +125,7 @@ export default function DefaultLayout({
             type="button"
             disabled={disabled}
             onClick={onEdit}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-40"
+            className="d-inline-flex align-items-center gap-1.5 rounded-3 border border-border bg-white px-3 py-1.5 text-xs fw-semibold text-body transition-colors-custom hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-40"
           >
             <Pencil className="h-3.5 w-3.5" aria-hidden />
             Éditer
@@ -136,7 +136,7 @@ export default function DefaultLayout({
             type="button"
             disabled={disabled}
             onClick={onNotes}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-40"
+            className="d-inline-flex align-items-center gap-1.5 rounded-3 border border-border bg-white px-3 py-1.5 text-xs fw-semibold text-body transition-colors-custom hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30 disabled:opacity-40"
           >
             <FileText className="h-3.5 w-3.5" aria-hidden />
             Notes
@@ -148,7 +148,7 @@ export default function DefaultLayout({
             disabled={disabled}
             onClick={onArchive}
             className={cn(
-              "inline-flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-colors",
+              "d-inline-flex align-items-center gap-1.5 rounded-3 border px-3 py-1.5 text-xs fw-semibold transition-colors-custom",
               "border-destructive/35 bg-destructive/10 text-destructive hover:bg-destructive/15",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/35",
               "disabled:opacity-40"
@@ -159,7 +159,7 @@ export default function DefaultLayout({
           </button>
         )}
         {!onComplete && !onEdit && !onArchive && !onNotes && (
-          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
+          <span className="d-inline-flex align-items-center gap-1 text-[10px] text-muted">
             <Circle className="h-3 w-3" aria-hidden />
             Aperçu
           </span>

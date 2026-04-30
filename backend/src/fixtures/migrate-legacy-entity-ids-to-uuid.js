@@ -69,12 +69,12 @@ async function rewriteHabitIdAcross(client, primary, oldId, newId) {
 
 async function migrateRoles(client, primary) {
   const rolesCol = primary.collection("roles");
-  const usersCol = primary.collection("users");
   const legacy = await rolesCol.find({ _id: OID }).toArray();
   for (const doc of legacy) {
     const oldId = doc._id;
     const newId = uuid();
-    await rewriteField(primary, "users", "role", oldId, newId, { phase: "roles" });
+    await rewriteField(primary, "users", "role",    oldId, newId, { phase: "roles" });
+    await rewriteField(primary, "users", "role_id", oldId, newId, { phase: "roles" });
     await replaceRootIdFreeingUniqueField(rolesCol, doc, newId, "nom");
   }
   if (legacy.length) logger.info({ action: "migrate-entity-ids", phase: "roles", count: legacy.length }, "Role _id migrated to UUID");

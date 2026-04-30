@@ -1,7 +1,12 @@
 import { StatusCodes as httpStatus } from "http-status-codes";
-import { AppError } from "@/core/errors.js";
-import { getCategory, getPublicCategories } from "@/shared/constants/categories.js";
-import { Users } from "@/modules/users/models/User.model.js";
+import CategoriesService             from "../services/categories.service.js";
+import { getCategory }               from "@/shared/constants/categories.js";
+import { Users }                     from "@/modules/users/models/User.model.js";
+
+const _h = (fn) => async (req, reply) => {
+  try   { return await fn(req, reply); }
+  catch (err) { reply.code(err.statusCode || httpStatus.BAD_REQUEST).send({ code: err.code, message: err.message }); }
+};
 
 const _autreTheme = getCategory("autre");
 
@@ -18,33 +23,53 @@ function _buildCustomCategory(custom) {
   };
 }
 
-const list = async (req, reply) => {
-  const defaults = getPublicCategories().filter((c) => c.slug !== "autre");
-
-  const user = await Users.findById(req.user.id);
+// GET /categories — active from DB + user custom categories
+const list = _h(async (req, reply) => {
+  const [dbCategories, user] = await Promise.all([
+    CategoriesService.getActive(),
+    Users.findById(req.user.id),
+  ]);
   const customCategories = (user?.custom_categories ?? []).map(_buildCustomCategory);
+  // Exclude the 'autre' default category (hidden template used by custom cats)
+  const filtered = dbCategories.filter(c => c.slug !== "autre");
+  reply.send([...filtered, ...customCategories]);
+});
 
-  reply.send([...defaults, ...customCategories]);
-};
-
-const getBySlug = async (req, reply) => {
+// GET /categories/:slug
+const getBySlug = _h(async (req, reply) => {
   const slug = String(req.params.slug || "").trim();
 
-  // Standard categories (exclude "autre" — hidden template)
-  const cat = getCategory(slug);
-  if (cat && cat.slug !== "autre") {
-    return reply.send(cat);
-  }
+  const cat = await CategoriesService.getBySlug(slug);
+  if (cat) return reply.send(cat);
 
-  // Custom category: slug is the ticket_id stored in user.custom_categories
-  const user = await Users.findById(req.user.id);
+  // Fallback: user custom category (ticket_id as slug)
+  const user   = await Users.findById(req.user.id);
   const custom = (user?.custom_categories ?? []).find((c) => c.ticket_id === slug);
-  if (custom) {
-    return reply.send(_buildCustomCategory(custom));
-  }
+  if (custom) return reply.send(_buildCustomCategory(custom));
 
-  throw new AppError("Catégorie inconnue", httpStatus.NOT_FOUND, "CAT-001");
-};
+  reply.code(404).send({ code: "CAT-003", message: "Catégorie introuvable" });
+});
 
-const CategoriesController = { list, getBySlug };
+// GET /admin/categories — all (including inactive) for admin panel
+const listAll = _h(async (_req, reply) => {
+  reply.send(await CategoriesService.getAll());
+});
+
+// POST /admin/categories
+const create = _h(async (req, reply) => {
+  reply.code(httpStatus.CREATED).send(await CategoriesService.create(req.body, req.user.id));
+});
+
+// PATCH /admin/categories/:id
+const update = _h(async (req, reply) => {
+  reply.send(await CategoriesService.update(req.params.id, req.body));
+});
+
+// DELETE /admin/categories/:id
+const remove = _h(async (req, reply) => {
+  await CategoriesService.delete(req.params.id);
+  reply.code(httpStatus.NO_CONTENT).send(null);
+});
+
+const CategoriesController = { list, getBySlug, listAll, create, update, remove };
 export default CategoriesController;

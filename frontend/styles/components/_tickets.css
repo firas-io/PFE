@@ -1,0 +1,419 @@
+/* ═══════════════════════════════════════════════════════
+   HabitFlow — Tickets page
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Page wrapper ────────────────────────────────────────── */
+.tkt-page { max-width: 860px; margin: 0 auto; }
+
+/* ── Page header ─────────────────────────────────────────── */
+.tkt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.tkt-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--hf-text);
+  letter-spacing: -0.025em;
+  margin: 0;
+}
+.tkt-subtitle {
+  font-size: 0.8125rem;
+  color: var(--hf-text-muted);
+  margin: 4px 0 0;
+}
+.tkt-btn-new {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: var(--hf-primary, #4338CA);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: opacity 0.15s ease;
+}
+.tkt-btn-new:hover { opacity: 0.88; }
+
+/* ── Create form ─────────────────────────────────────────── */
+.tkt-form-card {
+  background: #fff;
+  border: 1px solid var(--hf-border);
+  border-radius: 14px;
+  padding: 22px 24px;
+  margin-bottom: 20px;
+}
+.tkt-form-card h2 {
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--hf-text);
+  margin: 0 0 18px;
+}
+.tkt-form-group { margin-bottom: 14px; }
+.tkt-form-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--hf-text);
+  margin-bottom: 6px;
+}
+.tkt-form-input,
+.tkt-form-textarea {
+  width: 100%;
+  background: #F8FAFF;
+  border: 1px solid var(--hf-border);
+  border-radius: 9px;
+  padding: 9px 13px;
+  font-size: 0.8125rem;
+  color: var(--hf-text);
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.tkt-form-input:focus,
+.tkt-form-textarea:focus {
+  outline: none;
+  border-color: var(--hf-primary);
+  background: #fff;
+}
+.tkt-form-textarea { resize: vertical; min-height: 80px; }
+.tkt-form-error {
+  font-size: 0.75rem;
+  color: #DC2626;
+  margin: 8px 0 0;
+}
+.tkt-form-actions { display: flex; gap: 8px; margin-top: 4px; }
+.tkt-btn-cancel {
+  border: 1px solid var(--hf-border);
+  background: #fff;
+  border-radius: 9px;
+  padding: 8px 16px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--hf-text);
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.tkt-btn-cancel:hover { background: #F8FAFF; }
+.tkt-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--hf-primary, #4338CA);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  padding: 8px 18px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.tkt-btn-submit:hover { opacity: 0.88; }
+.tkt-btn-submit:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* ── KPI cards ───────────────────────────────────────────── */
+.tkt-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+@media (max-width: 576px) { .tkt-kpi-grid { grid-template-columns: 1fr; } }
+
+.tkt-kpi-card {
+  background: #fff;
+  border: 1px solid var(--hf-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.tkt-kpi-label {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--hf-text-muted);
+  margin: 0 0 6px;
+}
+.tkt-kpi-value {
+  font-size: 1.875rem;
+  font-weight: 800;
+  color: var(--hf-text);
+  margin: 0;
+  letter-spacing: -0.04em;
+}
+.tkt-kpi-icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.tkt-kpi-icon--pending   { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.25); color: #D97706; }
+.tkt-kpi-icon--in_review { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.25); color: #4338CA; }
+.tkt-kpi-icon--done      { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.25); color: #059669; }
+
+/* ── Tickets list card ───────────────────────────────────── */
+.tkt-list-card {
+  background: #fff;
+  border: 1px solid var(--hf-border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+/* Filter tabs */
+.tkt-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--hf-border);
+  margin-bottom: 16px;
+}
+.tkt-tab {
+  border: none;
+  background: #F1F5F9;
+  border-radius: 8px;
+  padding: 5px 13px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--hf-text-muted);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+}
+.tkt-tab:hover { background: #E8EAF6; color: var(--hf-text); }
+.tkt-tab.is-active { background: var(--hf-primary); color: #fff; }
+
+/* Empty state */
+.tkt-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 0;
+  font-size: 0.8125rem;
+  color: var(--hf-text-muted);
+}
+
+/* Ticket row */
+.tkt-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border: 1px solid var(--hf-border);
+  border-radius: 11px;
+  padding: 14px 16px;
+  background: #fff;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  margin-bottom: 8px;
+}
+.tkt-row:last-child { margin-bottom: 0; }
+.tkt-row:hover { border-color: #C7D2FE; box-shadow: 0 2px 8px rgba(99,102,241,0.07); }
+
+.tkt-row-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+@media (min-width: 768px) { .tkt-row-main { align-items: center; } }
+
+.tkt-row-id {
+  font-family: 'SFMono-Regular', 'Consolas', monospace;
+  font-size: 0.6875rem;
+  font-weight: 700;
+  color: var(--hf-text-muted);
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+@media (min-width: 768px) { .tkt-row-id { width: 80px; padding-top: 0; } }
+
+.tkt-row-body { flex: 1; min-width: 0; }
+.tkt-row-title {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--hf-text);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tkt-row-desc {
+  font-size: 0.75rem;
+  color: var(--hf-text-muted);
+  margin: 2px 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tkt-row-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Status badge */
+.tkt-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  padding: 2px 10px;
+  font-size: 0.6875rem;
+  font-weight: 700;
+}
+.tkt-badge--pending   { background: rgba(245,158,11,0.12); border-color: rgba(245,158,11,0.3); color: #B45309; }
+.tkt-badge--in_review { background: rgba(99,102,241,0.12); border-color: rgba(99,102,241,0.3); color: #4338CA; }
+.tkt-badge--done      { background: rgba(16,185,129,0.12); border-color: rgba(16,185,129,0.3); color: #059669; }
+.tkt-badge--rejected  { background: rgba(239,68,68,0.12);  border-color: rgba(239,68,68,0.3);  color: #DC2626; }
+
+.tkt-row-time {
+  font-size: 0.6875rem;
+  color: var(--hf-text-muted);
+}
+
+/* Delete button */
+.tkt-btn-delete {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--hf-border);
+  background: transparent;
+  border-radius: 7px;
+  color: var(--hf-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, border-color 0.15s, color 0.15s;
+}
+.tkt-row:hover .tkt-btn-delete { opacity: 1; }
+.tkt-btn-delete:hover { border-color: #EF4444; color: #EF4444; }
+
+/* Delete confirm strip */
+.tkt-delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(239,68,68,0.05);
+  border: 1px solid rgba(239,68,68,0.2);
+  border-radius: 9px;
+  padding: 8px 12px;
+}
+.tkt-delete-confirm-text {
+  flex: 1;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #DC2626;
+  margin: 0;
+}
+.tkt-btn-confirm-delete {
+  background: #EF4444;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.tkt-btn-confirm-delete:hover { opacity: 0.88; }
+.tkt-btn-confirm-cancel {
+  background: #fff;
+  border: 1px solid var(--hf-border);
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--hf-text);
+  cursor: pointer;
+}
+
+/* Admin note */
+.tkt-admin-note {
+  background: rgba(99,102,241,0.05);
+  border: 1px solid rgba(99,102,241,0.2);
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.tkt-admin-note-label {
+  font-size: 0.625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #6366F1;
+  opacity: 0.75;
+  margin: 0 0 3px;
+}
+.tkt-admin-note-text {
+  font-size: 0.75rem;
+  color: var(--hf-text);
+  margin: 0;
+}
+.tkt-admin-note-time {
+  font-size: 0.625rem;
+  color: var(--hf-text-muted);
+  margin: 4px 0 0;
+}
+
+/* ── Skeleton ────────────────────────────────────────────── */
+.tkt-skeleton {
+  background: #EEF2FF;
+  border-radius: 10px;
+  animation: tkt-pulse 1.4s ease-in-out infinite;
+}
+@keyframes tkt-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
+
+/* ── Dark mode ───────────────────────────────────────────── */
+.admin-shell--dark .tkt-form-card,
+.user-shell--dark  .tkt-form-card,
+.admin-shell--dark .tkt-kpi-card,
+.user-shell--dark  .tkt-kpi-card,
+.admin-shell--dark .tkt-list-card,
+.user-shell--dark  .tkt-list-card,
+.admin-shell--dark .tkt-row,
+.user-shell--dark  .tkt-row {
+  background: #1A1830;
+  border-color: #2D2A5E;
+}
+.admin-shell--dark .tkt-form-input,
+.user-shell--dark  .tkt-form-input,
+.admin-shell--dark .tkt-form-textarea,
+.user-shell--dark  .tkt-form-textarea {
+  background: #12101F;
+  border-color: #2D2A5E;
+  color: #E2E0FF;
+}
+.admin-shell--dark .tkt-btn-cancel,
+.user-shell--dark  .tkt-btn-cancel,
+.admin-shell--dark .tkt-btn-confirm-cancel,
+.user-shell--dark  .tkt-btn-confirm-cancel {
+  background: #12101F;
+  border-color: #2D2A5E;
+  color: #E2E0FF;
+}
+.admin-shell--dark .tkt-tab,
+.user-shell--dark  .tkt-tab {
+  background: #12101F;
+  color: #9E9CC5;
+}
+.admin-shell--dark .tkt-tab:hover,
+.user-shell--dark  .tkt-tab:hover { background: #1E1B4B; }
+.admin-shell--dark .tkt-skeleton,
+.user-shell--dark  .tkt-skeleton { background: #1E1B4B; }

@@ -1,4 +1,4 @@
-import styles from "./page.module.css";
+import styles from "../styles/pages/home.module.css";
 import Link from "next/link";
 import { AuthHeader } from "@/components/AuthHeader";
 

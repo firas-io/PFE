@@ -49,19 +49,13 @@ export const MyUserList = () => {
   }
 
   return (
-    <>
-      <div className="mb-3">
-        <h2 className="h3 mb-1 text-primary">Mes Utilisateurs</h2>
-        <div className="text-secondary small">Gérez les utilisateurs de votre équipe</div>
-      </div>
-
-      {error && <div className="alert alert-danger">{error}</div>}
+    <div className="adm-page">
+      {error && <div className="alert alert-danger mb-3">{error}</div>}
 
       <MyUserHeader
         total={users.length}
         loading={loading}
         onOpenCreate={() => setShowAddModal(true)}
-        onRefresh={refresh}
       />
 
       <MyUserTable users={users} onRefetch={refresh} />
@@ -71,6 +65,6 @@ export const MyUserList = () => {
         onHide={() => setShowAddModal(false)}
         onSuccess={refresh}
       />
-    </>
+    </div>
   );
 };

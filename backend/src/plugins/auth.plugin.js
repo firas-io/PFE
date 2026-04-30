@@ -31,6 +31,8 @@ const ABILITY_MAP = {
   "read:Log":             ["LOGS_VIEW"],
   "manage:Ticket":        ["TICKETS_MANAGE"],
   "read:AdminStats":      ["ADMIN_STATS_VIEW"],
+  "read:Category":        ["CATEGORIES_VIEW"],
+  "manage:Category":      ["CATEGORIES_MANAGE"],
 };
 
 async function jwtPlugin(fastify) {

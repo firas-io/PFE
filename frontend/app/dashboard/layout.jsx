@@ -1,4 +1,3 @@
-import './habitflow.css';
 import { DashboardShell } from './_components/DashboardShell';
 import { ToastProvider } from '@/components/Toast';
 

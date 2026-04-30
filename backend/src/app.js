@@ -4,6 +4,7 @@ import rateLimit  from "@fastify/rate-limit";
 import { setupAdmin }          from "@/fixtures/setup-admin.js";
 import { setupHabitTemplates } from "@/fixtures/setup-habit-templates.js";
 import { setupIndexes }        from "@/fixtures/setup-indexes.js";
+import { setupCategories }     from "@/fixtures/setup-categories.js";
 import { migrateUsersEnglishFields } from "@/fixtures/migrate-users-english-fields.js";
 import { migrateUserIdsToUuid }          from "@/fixtures/migrate-user-ids-to-uuid.js";
 import { migrateLegacyEntityIdsToUuid } from "@/fixtures/migrate-legacy-entity-ids-to-uuid.js";
@@ -17,6 +18,7 @@ import offDaysRoutes       from "@/modules/off-days/index.js";
 import categoryTicketsRoutes from "@/modules/category-tickets/index.js";
 import weeklyRecapRoutes   from "@/modules/weekly-recap/index.js";
 import adminStatsRoutes    from "@/modules/admin-stats/index.js";
+import weeklyStatsRoutes   from "@/modules/weekly-stats/index.js";
 import habitsRoutes        from "@/modules/habits/index.js";
 import habitTemplatesRoutes from "@/modules/habit-templates/index.js";
 import habitLogsRoutes     from "@/modules/habit-logs/index.js";
@@ -116,10 +118,11 @@ export async function buildApp() {
 
   // ─── Startup Fixtures ───────────────────────────────────────────────────────
   fastify.after(async () => {
-    await setupAdmin(fastify);
     await migrateUsersEnglishFields();
     await migrateUserIdsToUuid();
     await migrateLegacyEntityIdsToUuid();
+    await setupAdmin(fastify);
+    await setupCategories();
     await setupHabitTemplates(fastify);
     await setupIndexes();
   });
@@ -153,6 +156,7 @@ export async function buildApp() {
   fastify.register(categoryTicketsRoutes);
   fastify.register(weeklyRecapRoutes);
   fastify.register(adminStatsRoutes);
+  fastify.register(weeklyStatsRoutes);
   fastify.register(habitsRoutes);
   fastify.register(categoriesRoutes);
   fastify.register(habitTemplatesRoutes);

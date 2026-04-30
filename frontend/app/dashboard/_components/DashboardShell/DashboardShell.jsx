@@ -3,10 +3,8 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  IconChartBar,
   IconCalendarStats,
   IconCheck,
-  IconClock,
   IconHome,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
@@ -14,6 +12,7 @@ import {
   IconMoon,
   IconSun,
   IconMessageCircle,
+  IconReportAnalytics,
   IconUser,
   IconShieldLock,
   IconBell,
@@ -26,23 +25,20 @@ import { clearAuth, getRefreshToken, getUser } from '@/lib/auth';
 import { userFirstName, userLastName } from '@/lib/userDisplay';
 import { canAccessAdminShell } from '@/src/utils/permissions';
 import { API_BASE } from '@/lib/api';
-import '../../../admin/admin-layout.css';
 
 const NAV_LINKS = [
-  { href: '/dashboard/home',      icon: IconHome,          label: 'Tableau de bord', exact: true },
-  { href: '/dashboard/habits',    icon: IconCheck,         label: 'Habitudes' },
-  { href: '/dashboard/analytics', icon: IconChartBar,      label: 'Analytiques' },
-  { href: '/dashboard/history',   icon: IconClock,         label: 'Historique' },
-  { href: '/dashboard/calendar',  icon: IconCalendarStats, label: 'Calendrier' },
-  { href: '/dashboard/progress',  icon: IconUser,          label: 'Mon avancement' },
-  { href: '/dashboard/tickets',   icon: IconMessageCircle, label: 'Tickets' },
+  { href: '/dashboard/home',      icon: IconHome,              label: 'Tableau de bord', exact: true },
+  { href: '/dashboard/habits',    icon: IconCheck,             label: 'Habitudes' },
+  { href: '/dashboard/stats',     icon: IconReportAnalytics,   label: 'Statistiques' },
+  { href: '/dashboard/calendar',  icon: IconCalendarStats,     label: 'Calendrier' },
+  { href: '/dashboard/progress',  icon: IconUser,              label: 'Mon avancement' },
+  { href: '/dashboard/tickets',   icon: IconMessageCircle,     label: 'Tickets' },
 ];
 
 const MOBILE_NAV = [
   { href: '/dashboard/home',      label: 'Today',     icon: IconHome },
   { href: '/dashboard/habits',    label: 'Habitudes', icon: IconCheck },
   { href: '/dashboard/calendar',  label: 'Calendrier',icon: IconCalendarStats },
-  { href: '/dashboard/analytics', label: 'Insights',  icon: IconChartBar },
   { href: '/dashboard/progress',  label: 'Profil',    icon: IconUser },
 ];
 
