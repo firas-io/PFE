@@ -6,7 +6,10 @@ const _h = (fn) => async (req, reply) => {
   catch (err) { reply.code(err.statusCode || httpStatus.BAD_REQUEST).send({ code: err.code, message: err.message }); }
 };
 
-const getLast12Weeks = _h(async (_req, reply) => { reply.send(await AdminStatsService.getLast12Weeks()); });
+const getLast12Weeks = _h(async (req, reply) => {
+  const { period, dateFrom, dateTo } = req.query;
+  reply.send(await AdminStatsService.getLast12Weeks({ period, dateFrom, dateTo }));
+});
 
 const AdminStatsController = { getLast12Weeks };
 export default AdminStatsController;

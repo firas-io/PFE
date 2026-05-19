@@ -18,6 +18,7 @@ export const HabitTable = ({
   onUpdateDate,
   weeklyCompletionMap,
   todayIndex,
+  canManage = true,
 }) => {
   if (loading) return <div className="p-5"><HabitListSkeleton rows={4} /></div>;
 
@@ -30,7 +31,7 @@ export const HabitTable = ({
         <div>
           <p className="fw-semibold text-body">Aucune habitude trouvée</p>
           <p className="text-sm text-muted mt-1">
-            Ajustez vos filtres ou créez votre première habitude.
+            Ajustez vos filtres pour afficher d&apos;autres habitudes.
           </p>
         </div>
       </div>
@@ -56,6 +57,7 @@ export const HabitTable = ({
             onToggleDay={onToggleDay}
             onNotes={onNotes}
             onUpdateDate={onUpdateDate}
+            canManage={canManage}
           />
         ))}
       </AnimatePresence>

@@ -1,4 +1,5 @@
 import bcrypt        from "bcrypt";
+import { paginate }  from "@/helpers/pagination.helper.js";
 import { Users }     from "@/modules/users/models/User.model.js";
 import { Roles }     from "@/modules/roles/models/Role.model.js";
 import { HabitNoteHistories } from "@/modules/habits/models/HabitNoteHistory.model.js";
@@ -49,11 +50,14 @@ class ManagersService {
 
   // ─── Admin: manage managers ─────────────────────────────────────────────────
 
-  static async getManagers() {
+  static async getManagers(query = {}) {
     const managerRole = await ManagersService._getManagerRole();
-    const managers    = await Users.find({ role_id: managerRole._id, is_system: { $ne: true } });
-    return Promise.all(
-      managers.map(async (m) => {
+    const filter      = { role_id: managerRole._id, is_system: { $ne: true } };
+    const page        = parseInt(query?.page)  || 1;
+    const limit       = parseInt(query?.limit) || 10;
+    const { data, pagination } = await paginate(Users, filter, page, limit, { sort: { createdAt: -1 } });
+    const hydrated = await Promise.all(
+      data.map(async (m) => {
         const base = await ManagersService.withRole(m);
         const [managedUsersCount, managedUsersActive] = await Promise.all([
           Users.countDocuments({ manager_id: m._id, anonymized: { $ne: true } }),
@@ -62,6 +66,7 @@ class ManagersService {
         return { ...base, managedUsersCount, managedUsersActive };
       })
     );
+    return { data: hydrated, pagination };
   }
 
   static async assertIsManager(managerId) {

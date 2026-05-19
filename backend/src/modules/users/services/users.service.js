@@ -1,4 +1,6 @@
 import bcrypt                from "bcrypt";
+import { paginate }          from "@/helpers/pagination.helper.js";
+import { parseSearchQuery }  from "@/helpers/search.helper.js";
 import { Users }             from "../models/User.model.js";
 import { Roles }             from "@/modules/roles/models/Role.model.js";
 import { addLdapUser }       from "@/modules/auth/services/ldap.service.js";
@@ -12,6 +14,7 @@ import { HabitStats }        from "@/modules/habit-stats/models/HabitStats.model
 import { HabitLogs }         from "@/modules/habit-logs/models/HabitLog.model.js";
 import { Habits }            from "@/modules/habits/models/Habit.model.js";
 import { CategoryTickets }   from "@/modules/category-tickets/models/CategoryTicket.model.js";
+import CategoriesService     from "@/modules/categories/services/categories.service.js";
 import { AppError }          from "@/core/errors.js";
 import logger                from "@/utils/logger.util.js";
 import { ErrorsCodes, ErrorMessages, SYSTEM_ARCHIVED_USER_ID } from "../constants/users.constants.js";
@@ -62,11 +65,58 @@ class UsersService {
     return UsersService.sanitize(user);
   }
 
-  static async getUsers(managerId = null) {
+  static async getUsers(managerId = null, query = {}) {
     const filter = { anonymized: { $ne: true }, is_system: { $ne: true } };
     if (managerId) filter.manager_id = managerId;
-    const users = await Users.find(filter);
-    return Promise.all(users.map(UsersService.withRole));
+    const page  = parseInt(query?.page)  || 1;
+    const limit = parseInt(query?.limit) || 10;
+    const { data, pagination } = await paginate(Users, filter, page, limit, { sort: { createdAt: -1 } });
+    const hydrated = await Promise.all(data.map(UsersService.withRole));
+    return { data: hydrated, pagination };
+  }
+
+  /**
+   * Search users by email, name, or department.
+   * Admin (USERS_VIEW): all users. Manager (MANAGER_USERS_VIEW): own team only.
+   */
+  static async searchUsers(requesterId, permissions, query = {}) {
+    const term = String(query.q ?? query.search ?? "").trim();
+    const regex = parseSearchQuery(term);
+    if (!regex) {
+      throw new AppError("Le paramètre q (recherche) est requis.", 400, ErrorsCodes.FIELDS_REQUIRED);
+    }
+
+    const canViewAll = permissions.includes("USERS_VIEW") || permissions.includes("ALL");
+    const canViewTeam = permissions.includes("MANAGER_USERS_VIEW");
+    if (!canViewAll && !canViewTeam) {
+      throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
+    }
+
+    const filter = {
+      anonymized: { $ne: true },
+      is_system: { $ne: true },
+      $or: [
+        { email: { $regex: regex } },
+        { firstName: { $regex: regex } },
+        { lastName: { $regex: regex } },
+        { prenom: { $regex: regex } },
+        { nom: { $regex: regex } },
+        { department: { $regex: regex } },
+        { departement: { $regex: regex } },
+      ],
+    };
+
+    if (!canViewAll) {
+      filter.manager_id = requesterId;
+    } else if (query.managerId) {
+      filter.manager_id = query.managerId;
+    }
+
+    const page  = parseInt(query?.page)  || 1;
+    const limit = Math.min(parseInt(query?.limit) || 10, 50);
+    const { data, pagination } = await paginate(Users, filter, page, limit, { sort: { createdAt: -1 } });
+    const hydrated = await Promise.all(data.map(UsersService.withRole));
+    return { data: hydrated, pagination, q: term };
   }
 
   static async getUserById(id, requesterId, permissions) {
@@ -322,6 +372,60 @@ class UsersService {
 
     const updated = await Users.updateOne({ _id: id }, { $set: { isActive } });
     return { message: isActive ? "User activated" : "User deactivated", user: await UsersService.withRole(updated) };
+  }
+
+  static async getMyCategories(userId) {
+    const user = await Users.findById(userId);
+    if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
+    return { categories: user.categories ?? [] };
+  }
+
+  static async addMyCategories(userId, slugs) {
+    if (!Array.isArray(slugs) || slugs.length === 0)
+      throw new AppError("Au moins un slug de catégorie est requis.", 400, "CAT_SLUGS_REQUIRED");
+
+    const invalid = [];
+    const resolved = [];
+    for (const raw of slugs) {
+      const slug = await CategoriesService.resolveActiveSlug(raw);
+      if (!slug) invalid.push(raw);
+      else resolved.push(slug);
+    }
+    if (invalid.length > 0) {
+      throw new AppError(
+        `Catégorie(s) introuvable(s) ou inactive(s) : ${invalid.join(", ")}. Vérifiez qu'elles existent et sont actives dans l'admin.`,
+        400,
+        "INVALID_CATEGORY"
+      );
+    }
+
+    const user = await Users.findById(userId);
+    if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
+
+    const existing = user.categories ?? [];
+    const merged   = [...new Set([...existing, ...resolved])];
+    await Users.updateOne({ _id: userId }, { $set: { categories: merged } });
+    return { categories: merged };
+  }
+
+  static async removeMyCategory(userId, slug) {
+    const resolved = await CategoriesService.resolveActiveSlug(slug);
+    if (!resolved)
+      throw new AppError(`Catégorie invalide : ${slug}`, 400, "INVALID_CATEGORY");
+
+    const user = await Users.findById(userId);
+    if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
+
+    const existing = user.categories ?? [];
+    if (!existing.includes(resolved))
+      throw new AppError("Cette catégorie ne fait pas partie de vos catégories.", 400, "CAT_NOT_SELECTED");
+
+    if (existing.length <= 1)
+      throw new AppError("Vous devez conserver au moins une catégorie.", 400, "CAT_MIN_ONE");
+
+    const updated = existing.filter(s => s !== resolved);
+    await Users.updateOne({ _id: userId }, { $set: { categories: updated } });
+    return { categories: updated };
   }
 }
 

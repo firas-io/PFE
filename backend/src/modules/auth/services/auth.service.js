@@ -193,9 +193,6 @@ class AuthService {
     const valid = await bcrypt.compare(mot_de_passe, hash);
     if (!valid) throw new AppError(ErrorMessages[ErrorsCodes.INVALID_CREDENTIALS], 401, ErrorsCodes.INVALID_CREDENTIALS);
 
-    await Users.updateOne({ _id: user._id }, { $set: { lastLoginAt: new Date() } });
-    user = await Users.findById(user._id);
-
     logger.info({ action: "login-mongo-fallback", email: user?.email }, "User logged in with Mongo password (LDAP failed or user not in directory)");
     const { onboardingPending, isFirstLogin } = await AuthService._handleFirstLogin(String(user._id));
     return { user, role, onboardingPending, isFirstLogin };
@@ -208,12 +205,19 @@ class AuthService {
     const emailTrim = String(email).trim();
     const result    = await authenticateUser({ username: emailTrim, password: mot_de_passe });
 
-    // LDAP auth failed — fallback to local password if LDAP_ENABLED
+    // LDAP auth failed — fallback to local Mongo password (e.g. admin@habitflow.com)
     if (!result.ok) {
       if (String(process.env.LDAP_ENABLED || "false").toLowerCase() === "true") {
         try {
           return await AuthService.validateLocalPasswordOnly({ email: emailTrim, mot_de_passe });
         } catch {
+          if (result.reason === "LDAP_UNAVAILABLE") {
+            throw new AppError(
+              ErrorMessages[ErrorsCodes.LDAP_UNAVAILABLE],
+              503,
+              ErrorsCodes.LDAP_UNAVAILABLE
+            );
+          }
           throw new AppError(ErrorMessages[ErrorsCodes.INVALID_CREDENTIALS], 401, ErrorsCodes.INVALID_CREDENTIALS);
         }
       }
@@ -222,26 +226,22 @@ class AuthService {
 
     const ldapUser = result.user;
 
-    // ── 1. Detect role from DN ─────────────────────────────────────────────
-    const roleNom    = _detectRoleFromDn(ldapUser.dn, emailTrim);
-    const dbRole     = await Roles.findOne({ nom: roleNom });
-    if (!dbRole)
-      throw new AppError(ErrorMessages[ErrorsCodes.ROLE_NOT_INIT], 500, ErrorsCodes.ROLE_NOT_INIT);
-
-    // ── 2. Resolve manager_id for regular users ────────────────────────────
-    //    Only utilisateurs have a `manager` attribute in LDAP
-    const managerId = roleNom === "utilisateur"
-      ? await AuthService._resolveManagerId(ldapUser.managerDn)
-      : null;
-
-    // ── 3. Extract name fields from LDAP attributes ────────────────────────
-    const firstName = ldapUser.givenName || (ldapUser.cn ? String(ldapUser.cn).split(" ")[0] : "LDAP");
-    const lastName  = ldapUser.sn        || (ldapUser.cn ? String(ldapUser.cn).split(" ").slice(1).join(" ") : "User");
-
-    // ── 4. Create or sync the user in MongoDB ─────────────────────────────
+    // ── Create the user in MongoDB only on first LDAP login ────────────────
     let user = await AuthService._findUserByLoginEmail(emailTrim);
 
     if (!user) {
+      const roleNom = _detectRoleFromDn(ldapUser.dn, emailTrim);
+      const dbRole  = await Roles.findOne({ nom: roleNom });
+      if (!dbRole)
+        throw new AppError(ErrorMessages[ErrorsCodes.ROLE_NOT_INIT], 500, ErrorsCodes.ROLE_NOT_INIT);
+
+      const managerId = roleNom === "utilisateur"
+        ? await AuthService._resolveManagerId(ldapUser.managerDn)
+        : null;
+
+      const firstName = ldapUser.givenName || (ldapUser.cn ? String(ldapUser.cn).split(" ")[0] : "LDAP");
+      const lastName  = ldapUser.sn        || (ldapUser.cn ? String(ldapUser.cn).split(" ").slice(1).join(" ") : "User");
+
       // First LDAP login — create user with all resolved fields
       const hashed = await bcrypt.hash(crypto.randomBytes(32).toString("hex"), 10);
       const doc    = {
@@ -250,7 +250,6 @@ class AuthService {
         email:        emailTrim,
         passwordHash: hashed,
         role_id:      dbRole._id,
-        lastLoginAt:  new Date(),
         isActive:     true,
         isFirstLogin: true,
         categories:   [],
@@ -259,12 +258,7 @@ class AuthService {
       user = await Users.insertOne(doc);
       logger.info({ action: "login-ldap-create", email: emailTrim, role: roleNom, managerId }, "User auto-created from LDAP");
     } else {
-      // Subsequent login — sync role and manager_id from LDAP on every login
-      const update = { lastLoginAt: new Date(), role_id: dbRole._id };
-      if (managerId) update.manager_id = managerId;
-      await Users.updateOne({ _id: user._id }, { $set: update });
-      user = await Users.findById(user._id);
-      logger.info({ action: "login-ldap-sync", email: emailTrim, role: roleNom, managerId }, "User synced from LDAP");
+      logger.info({ action: "login-ldap-existing", email: emailTrim }, "Existing LDAP user logged in without MongoDB sync");
     }
 
     if (!user.isActive)

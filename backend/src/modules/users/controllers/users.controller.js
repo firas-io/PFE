@@ -7,7 +7,8 @@ const _h = (fn) => async (req, reply) => {
 };
 
 const createUser       = _h(async (req, reply) => { reply.code(httpStatus.CREATED).send(await UsersService.createUser(req.body)); });
-const getUsers         = _h(async (req, reply)  => { reply.send(await UsersService.getUsers(req.query.managerId || null)); });
+const getUsers         = _h(async (req, reply)  => { reply.send(await UsersService.getUsers(req.query.managerId || null, req.query)); });
+const searchUsers      = _h(async (req, reply)  => { reply.send(await UsersService.searchUsers(req.user.id, req.user.permissions, req.query)); });
 const getUserById      = _h(async (req, reply)  => { reply.send(await UsersService.getUserById(req.params.id, req.user.id, req.user.permissions)); });
 const updateUserRole   = _h(async (req, reply)  => { reply.send(await UsersService.updateUserRole(req.params.id, req.body.role)); });
 const updateUser       = _h(async (req, reply)  => { reply.send(await UsersService.updateUser(req.params.id, req.body, req.user.id, req.user.permissions)); });
@@ -28,5 +29,9 @@ const deleteUser = async (req, reply) => {
   }
 };
 
-const UsersController = { createUser, getUsers, getUserById, updateUserRole, updateUser, updateUserStatus, adminCreateUser, deleteUser };
+const getMyCategories  = _h(async (req, reply) => { reply.send(await UsersService.getMyCategories(req.user.id)); });
+const addMyCategories  = _h(async (req, reply) => { reply.send(await UsersService.addMyCategories(req.user.id, req.body.categories)); });
+const removeMyCategory = _h(async (req, reply) => { reply.send(await UsersService.removeMyCategory(req.user.id, req.params.slug)); });
+
+const UsersController = { createUser, getUsers, searchUsers, getUserById, updateUserRole, updateUser, updateUserStatus, adminCreateUser, deleteUser, getMyCategories, addMyCategories, removeMyCategory };
 export default UsersController;

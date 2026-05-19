@@ -38,10 +38,8 @@ export async function migrateUsersEnglishFields() {
       set.department = doc.departement;
       unset.departement = "";
     }
-    if (doc.lastLoginAt === undefined && doc.dernier_login !== undefined) {
-      set.lastLoginAt = doc.dernier_login;
-      unset.dernier_login = "";
-    }
+    if (doc.lastLoginAt !== undefined) unset.lastLoginAt = "";
+    if (doc.dernier_login !== undefined) unset.dernier_login = "";
     if (doc.firstLoginAt === undefined && doc.first_login_at !== undefined) {
       set.firstLoginAt = doc.first_login_at;
       unset.first_login_at = "";

@@ -14,7 +14,7 @@ const VisibilityBadge = ({ visible }) =>
     ? <span className="adm-status adm-status--team">Public</span>
     : <span className="adm-status adm-status--personal">Admin</span>;
 
-export const HabitTable = ({ habits, loading, onEdit, onRefetch }) => {
+export const HabitTable = ({ habits, loading, onEdit, onRefetch, canManage }) => {
   if (loading) {
     return (
       <div className="text-center py-5">
@@ -50,7 +50,7 @@ export const HabitTable = ({ habits, loading, onEdit, onRefetch }) => {
                 <th>Priorité</th>
                 <th>Statut</th>
                 <th>Visibilité</th>
-                <th style={{ width: 1 }} />
+                {canManage && <th style={{ width: 1 }} />}
               </tr>
             </thead>
             <tbody>
@@ -65,7 +65,7 @@ export const HabitTable = ({ habits, loading, onEdit, onRefetch }) => {
                   <td>{PRIORITY_LABELS[h.priorite] || h.priorite || <span className="text-secondary">—</span>}</td>
                   <td><StatusBadge statut={h.statut} /></td>
                   <td><VisibilityBadge visible={h.visible_pour_tous} /></td>
-                  <td><Actions habit={h} onEdit={onEdit} onRefetch={onRefetch} /></td>
+                  {canManage && <td><Actions habit={h} onEdit={onEdit} onRefetch={onRefetch} /></td>}
                 </tr>
               ))}
             </tbody>
@@ -93,7 +93,7 @@ export const HabitTable = ({ habits, loading, onEdit, onRefetch }) => {
                 {h.date_debut ? new Date(h.date_debut).toLocaleDateString('fr-FR') : ''}
                 {h.frequence ? ` · ${FREQUENCY_LABELS[h.frequence] || h.frequence}` : ''}
               </div>
-              <Actions habit={h} onEdit={onEdit} onRefetch={onRefetch} />
+              {canManage && <Actions habit={h} onEdit={onEdit} onRefetch={onRefetch} />}
             </div>
           </div>
         ))}

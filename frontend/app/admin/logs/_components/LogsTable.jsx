@@ -5,6 +5,7 @@ import { IconRefresh } from '@tabler/icons-react';
 import { apiFetch } from '@/lib/api';
 import { getToken } from '@/lib/auth';
 import { userFirstName, userLastName } from '@/lib/userDisplay';
+import Pagination from '@/components/Pagination';
 
 const PAGE_SIZE = 50;
 
@@ -96,9 +97,8 @@ export function LogsTable() {
     });
   }, [logs, filterStatut, search, dateDebut, dateFin]);
 
-  const paginated = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const pageStart = page * PAGE_SIZE;
-  const pageEnd   = Math.min(pageStart + PAGE_SIZE, filtered.length);
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
+  const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   // ── Initial token spinner ─────────────────────────────────────────────────
   if (!token) {
@@ -257,15 +257,11 @@ export function LogsTable() {
             ))}
           </div>
 
-          {filtered.length > PAGE_SIZE && (
-            <div className="adm-pagination mt-2">
-              <span className="adm-pagination-info">{pageStart + 1}–{pageEnd} sur {filtered.length}</span>
-              <div className="adm-pagination-btns">
-                <button className="adm-pagination-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Précédent</button>
-                <button className="adm-pagination-btn" disabled={pageEnd >= filtered.length} onClick={() => setPage(p => p + 1)}>Suivant →</button>
-              </div>
-            </div>
-          )}
+          <Pagination
+            currentPage={page + 1}
+            totalPages={totalPages}
+            onPageChange={(p) => setPage(p - 1)}
+          />
         </>
       )}
     </div>

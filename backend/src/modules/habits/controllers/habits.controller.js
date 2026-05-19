@@ -30,7 +30,8 @@ const updateHabit = async (req, reply) => {
 };
 
 const getAllHabits        = _h(async (req, reply) => { reply.send(await HabitsService.getAllHabits(req.query)); });
-const getMyHabits        = _h(async (req, reply) => { reply.send(await HabitsService.getMyHabits(req.user.id, req.query)); });
+const searchHabits        = _h(async (req, reply) => { reply.send(await HabitsService.searchHabits(req.user.id, req.user.permissions, req.query)); });
+const getMyHabits        = _h(async (req, reply) => { reply.send(await HabitsService.getMyHabits(req.user.id, req.query, req.user)); });
 const getHabitById       = _h(async (req, reply) => { reply.send(await HabitsService.getHabitById(req.params.id, req.user.id, req.user.permissions)); });
 const updateHabitStatus  = _h(async (req, reply) => { reply.send(await HabitsService.updateHabitStatus(req.params.id, req.body, req.user.id, req.user.permissions)); });
 const updateHabitNotes   = _h(async (req, reply) => { reply.send(await HabitsService.updateHabitNotes(req.params.id, req.body, req.user.id)); });
@@ -40,6 +41,10 @@ const cloneHabit         = _h(async (req, reply) => { reply.code(httpStatus.CREA
 const archiveHabit = _h(async (req, reply) => {
   await HabitsService.archiveHabit(req.params.id, req.user.id, req.user.permissions);
   reply.code(httpStatus.NO_CONTENT).send(null);
+});
+
+const restoreHabit = _h(async (req, reply) => {
+  reply.send(await HabitsService.restoreHabit(req.params.id, req.user.id, req.user.permissions));
 });
 
 // Not wrapped in _h — needs to forward err.partial on HABIT-005 partial failures.
@@ -58,10 +63,14 @@ const getStreaks = _h(async (req, reply) => {
   reply.send(await StreaksService.getStreaks(req.params.id, req.user.id, req.user.permissions));
 });
 
+const getGlobalHabits     = _h(async (req, reply) => { reply.send(await HabitsService.getGlobalHabits(req.user.id)); });
+const activateHabit       = _h(async (req, reply) => { reply.code(httpStatus.CREATED).send(await HabitsService.activateHabit(req.params.id, req.user.id)); });
+const updateMyHabitSettings = _h(async (req, reply) => { reply.send(await HabitsService.updateMyHabitSettings(req.params.id, req.user.id, req.body)); });
+
 const HabitsController = {
-  createHabit, getAllHabits, getMyHabits, getHabitById, updateHabit,
+  createHabit, getAllHabits, searchHabits, getMyHabits, getHabitById, updateHabit,
   updateHabitStatus, updateHabitNotes, getNoteHistory, cloneHabit,
-  archiveHabit, deleteHabit,
-  getStreaks,
+  archiveHabit, restoreHabit, deleteHabit, getStreaks,
+  getGlobalHabits, activateHabit, updateMyHabitSettings,
 };
 export default HabitsController;

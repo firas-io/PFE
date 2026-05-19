@@ -2,7 +2,6 @@
 import React from 'react';
 
 import { Modal } from '@/components/Modal';
-import { HabitVisibilitySection } from '../HabitVisibilitySection';
 
 export const TemplateModal = ({
   show,
@@ -10,8 +9,6 @@ export const TemplateModal = ({
   templates,
   selectedTemplateId,
   setSelectedTemplateId,
-  visiblePourTous,
-  setVisiblePourTous,
   onSubmit,
   isLoading,
 }) => {
@@ -52,13 +49,6 @@ export const TemplateModal = ({
             </option>
           ))}
         </select>
-      </div>
-      <div className="row g-3 mx-0">
-        <HabitVisibilitySection
-          idPrefix="template"
-          visiblePourTous={visiblePourTous}
-          setVisiblePourTous={setVisiblePourTous}
-        />
       </div>
     </Modal>
   );

@@ -1,22 +1,35 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Modal } from '@/components/Modal';
 import { HabitForm } from '../HabitForm';
 import { EMPTY_HABIT_FORM } from '../../_constants';
 import { apiFetch } from '@/lib/api';
+import { invalidateCategoriesCache } from '@/hooks/useCategories';
 
 const STEPS = ['Informations', 'Catégorie', 'Détails'];
 
 export const AddHabitModal = ({ show, onClose, onSuccess, allowedCategories }) => {
-  const defaultCategory = allowedCategories?.length > 0 ? allowedCategories[0] : EMPTY_HABIT_FORM.categorie;
-  const [form, setForm] = useState({ ...EMPTY_HABIT_FORM, categorie: defaultCategory });
+  const [form, setForm] = useState({ ...EMPTY_HABIT_FORM, categorie: '' });
+
+  useEffect(() => {
+    if (show) invalidateCategoriesCache();
+  }, [show]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [stepError, setStepError] = useState(null);
 
+  useEffect(() => {
+    if (!show) return;
+    invalidateCategoriesCache();
+    setForm({ ...EMPTY_HABIT_FORM, categorie: '' });
+    setError(null);
+    setStepError(null);
+    setCurrentStep(0);
+  }, [show]);
+
   const handleClose = () => {
-    setForm({ ...EMPTY_HABIT_FORM, categorie: defaultCategory });
+    setForm({ ...EMPTY_HABIT_FORM, categorie: '' });
     setError(null);
     setStepError(null);
     setCurrentStep(0);
@@ -30,9 +43,16 @@ export const AddHabitModal = ({ show, onClose, onSuccess, allowedCategories }) =
         setStepError("Le nom de l'habitude est requis");
         return;
       }
+      if (!form.description || form.description.trim() === '') {
+        setStepError('La description est requise');
+        return;
+      }
     }
     if (currentStep === 1) {
-      if (!form.categorie) {
+      const picked =
+        form.categorie &&
+        (form.categorie !== 'autre' || form.categorie_ticket_id || form.categorie_autre_nom?.trim());
+      if (!picked) {
         setStepError('Veuillez sélectionner une catégorie');
         return;
       }
@@ -48,6 +68,10 @@ export const AddHabitModal = ({ show, onClose, onSuccess, allowedCategories }) =
   const handleSubmit = async () => {
     if (!form.nom.trim()) {
       setError("Le nom de l'habitude est requis");
+      return;
+    }
+    if (!form.description?.trim()) {
+      setError('La description est requise');
       return;
     }
     setSaving(true);
@@ -69,8 +93,8 @@ export const AddHabitModal = ({ show, onClose, onSuccess, allowedCategories }) =
       }
 
       const payload = {
-        nom: form.nom,
-        description: form.description,
+        nom: form.nom.trim(),
+        description: form.description.trim(),
         categorie: form.categorie,
         categorie_champs: form.categorie_champs || {},
         categorie_label: form.categorie === 'autre'
@@ -133,8 +157,8 @@ export const AddHabitModal = ({ show, onClose, onSuccess, allowedCategories }) =
               <button
                 type="button"
                 onClick={handleSubmit}
-                disabled={saving || !form.nom.trim()}
-                style={{ fontSize: 13, padding: '7px 16px', borderRadius: 8, background: '#534AB7', color: '#EEEDFE', border: 'none', cursor: saving || !form.nom.trim() ? 'not-allowed' : 'pointer', fontWeight: 500, opacity: saving || !form.nom.trim() ? 0.6 : 1 }}
+                disabled={saving || !form.nom.trim() || !form.description?.trim()}
+                style={{ fontSize: 13, padding: '7px 16px', borderRadius: 8, background: '#534AB7', color: '#EEEDFE', border: 'none', cursor: saving || !form.nom.trim() || !form.description?.trim() ? 'not-allowed' : 'pointer', fontWeight: 500, opacity: saving || !form.nom.trim() || !form.description?.trim() ? 0.6 : 1 }}
               >
                 {saving
                   ? <><span className="spinner-border spinner-border-sm me-2" role="status" />Création...</>
@@ -175,6 +199,7 @@ export const AddHabitModal = ({ show, onClose, onSuccess, allowedCategories }) =
       )}
 
       <HabitForm
+        key={show ? 'add-habit-open' : 'add-habit-closed'}
         formId="add-habit"
         form={form}
         onChange={setForm}

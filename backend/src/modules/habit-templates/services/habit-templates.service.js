@@ -6,7 +6,7 @@ import {
   normalizeObjectif, normalizeWeekDays, normalizeHorairesCibles,
   canSetVisiblePourTous, parseVisiblePourTous
 } from "@/utils/habit-normalize.js";
-import { isValidCategory } from "@/shared/constants/categories.js";
+import CategoriesService from "@/modules/categories/services/categories.service.js";
 import { ErrorsCodes, ErrorMessages } from "../constants/habit-templates.constants.js";
 
 class HabitTemplatesService {
@@ -20,7 +20,8 @@ class HabitTemplatesService {
     const statut    = normalizeStatus(safeBody.statut ?? safeBody.status) || "active";
     const nom       = safeBody.nom ?? safeBody.titre ?? template.nom_template;
     let categorie = safeBody.categorie !== undefined ? normalizeCategorie(safeBody.categorie) : template.categorie;
-    if (!isValidCategory(categorie)) categorie = "autre";
+    const resolvedCat = categorie ? await CategoriesService.resolveActiveSlug(categorie) : null;
+    categorie = resolvedCat ?? "autre";
     const priorite  = safeBody.priorite  !== undefined ? normalizePriorite(safeBody.priorite)  : template.priorite;
     const frequence = normalizeFrequence(safeBody.frequence, safeBody) ?? template.frequence;
     const obj       = normalizeObjectif(safeBody);

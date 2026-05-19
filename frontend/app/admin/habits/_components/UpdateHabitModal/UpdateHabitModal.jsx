@@ -3,29 +3,52 @@ import React, { useEffect, useState } from 'react';
 
 import { apiFetch } from '@/lib/api';
 import { Modal } from '@/components/Modal';
-import { HabitForm } from '@/app/dashboard/habits/_components/HabitForm';
-import { EMPTY_HABIT_FORM } from '@/app/dashboard/habits/_constants';
+import { HabitForm } from '../HabitForm/HabitForm';
+
+const EMPTY_FORM = {
+  nom: '',
+  description: '',
+  categorie: 'autre',
+  categorie_autre_nom: '',
+  categorie_autre_description: '',
+  frequence: 'daily',
+  priorite: 'medium',
+  heure_precise: '',
+  date_debut: '',
+  jours_specifiques: [],
+  fois_par_semaine: 1,
+  horaires_cibles: [],
+  objectif_quantifiable: '',
+  visible_pour_tous: false,
+};
+
+function toDateInput(value) {
+  if (!value) return '';
+  try { return new Date(value).toISOString().slice(0, 10); } catch { return ''; }
+}
 
 export const UpdateHabitModal = ({ show, onHide, onSuccess, selectedHabit }) => {
-  const [form, setForm] = useState(EMPTY_HABIT_FORM);
+  const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     if (show && selectedHabit) {
       setForm({
-        nom: selectedHabit.nom || '',
-        description: selectedHabit.description || '',
-        categorie: selectedHabit.categorie || 'autre',
-        categorie_champs: selectedHabit.categorie_champs || {},
-        categorie_autre_nom: selectedHabit.categorie_label || '',
+        nom:                      selectedHabit.nom || '',
+        description:              selectedHabit.description || '',
+        categorie:                selectedHabit.categorie || 'autre',
+        categorie_autre_nom:      selectedHabit.categorie_label || '',
         categorie_autre_description: '',
-        frequence: selectedHabit.frequence || 'daily',
-        priorite: selectedHabit.priorite || 'medium',
-        objectif_detail: selectedHabit.objectif_detail || '',
-        note: selectedHabit.note || '',
-        date_debut: selectedHabit.date_debut || '',
-        dates_specifiques: selectedHabit.dates_specifiques || [],
+        frequence:                selectedHabit.frequence || 'daily',
+        priorite:                 selectedHabit.priorite || 'medium',
+        heure_precise:            selectedHabit.heure_precise || '',
+        date_debut:               toDateInput(selectedHabit.date_debut),
+        jours_specifiques:        selectedHabit.jours_specifiques || [],
+        fois_par_semaine:         selectedHabit.fois_par_semaine || 1,
+        horaires_cibles:          selectedHabit.horaires_cibles || [],
+        objectif_quantifiable:    selectedHabit.objectif_detail || '',
+        visible_pour_tous:        selectedHabit.visible_pour_tous ?? false,
       });
     }
     if (!show) setError(null);
@@ -33,29 +56,30 @@ export const UpdateHabitModal = ({ show, onHide, onSuccess, selectedHabit }) => 
 
   const handleSubmit = async () => {
     if (!selectedHabit) return;
-    if (!form.nom.trim()) {
-      setError("Le nom de l'habitude est requis");
-      return;
-    }
+    if (!form.nom.trim()) { setError("Le nom de l'habitude est requis"); return; }
     setSaving(true);
     setError(null);
     try {
       const payload = {
-        nom: form.nom,
-        description: form.description,
-        categorie: form.categorie,
-        categorie_champs: form.categorie_champs || {},
-        categorie_label:
-          form.categorie === 'autre' && form.categorie_autre_nom?.trim()
-            ? form.categorie_autre_nom.trim()
-            : undefined,
-        frequence: form.frequence,
-        priorite: form.priorite,
-        objectif_detail: form.objectif_detail,
-        note: form.note,
+        nom:             form.nom,
+        description:     form.description,
+        categorie:       form.categorie,
+        categorie_label: form.categorie === 'autre' && form.categorie_autre_nom?.trim()
+          ? form.categorie_autre_nom.trim()
+          : undefined,
+        frequence:        form.frequence,
+        priorite:         form.priorite,
+        heure_precise:    form.heure_precise || undefined,
+        jours_specifiques: form.frequence === 'specific_days' && form.jours_specifiques?.length
+          ? form.jours_specifiques : undefined,
+        fois_par_semaine: form.frequence === 'times_per_week'
+          ? form.fois_par_semaine : undefined,
+        horaires_cibles:  form.horaires_cibles?.length ? form.horaires_cibles : undefined,
+        objectif_detail:  form.objectif_quantifiable || undefined,
+        visible_pour_tous: form.visible_pour_tous,
       };
       if (form.date_debut) payload.date_debut = form.date_debut;
-      if (form.dates_specifiques?.length) payload.dates_specifiques = form.dates_specifiques;
+
       await apiFetch(`/habits/${selectedHabit._id}`, { method: 'PUT', body: JSON.stringify(payload) });
       onSuccess();
       onHide();
@@ -71,6 +95,7 @@ export const UpdateHabitModal = ({ show, onHide, onSuccess, selectedHabit }) => 
       open={show}
       title="Modifier une habitude"
       onClose={onHide}
+      size="lg"
       footer={
         <>
           <button className="btn btn-secondary" type="button" onClick={onHide} disabled={saving}>

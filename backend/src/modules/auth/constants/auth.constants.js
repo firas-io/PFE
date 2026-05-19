@@ -13,6 +13,7 @@ export const ErrorsCodes = {
   REFRESH_TOKEN_REUSE:   "AUTH-012",
   LOCAL_LOGIN_DISABLED:  "AUTH-013",
   REGISTER_DISABLED_LDAP: "AUTH-014",
+  LDAP_UNAVAILABLE:       "AUTH-015",
 };
 
 export const ErrorMessages = {
@@ -30,4 +31,5 @@ export const ErrorMessages = {
   [ErrorsCodes.REFRESH_TOKEN_REUSE]:   "Refresh token reuse detected — all sessions invalidated",
   [ErrorsCodes.LOCAL_LOGIN_DISABLED]:  "Password login is disabled — use LDAP (directory credentials)",
   [ErrorsCodes.REGISTER_DISABLED_LDAP]: "Self-registration is disabled when LDAP authentication is enabled",
+  [ErrorsCodes.LDAP_UNAVAILABLE]:       "Serveur LDAP indisponible. Démarrez Docker Desktop puis exécutez : .\\scripts\\start-ldap.ps1",
 };

@@ -10,6 +10,16 @@ import { IconRefresh } from '@tabler/icons-react';
 import { apiFetch } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 import { userFirstName } from '@/lib/userDisplay';
+import DateFilter from '@/components/DateFilter';
+
+function statsQuery(range) {
+  const params = new URLSearchParams();
+  if (range?.period)   params.set('period', range.period);
+  if (range?.dateFrom) params.set('dateFrom', range.dateFrom);
+  if (range?.dateTo)   params.set('dateTo', range.dateTo);
+  const q = params.toString();
+  return q ? `?${q}` : '';
+}
 
 const CARD = {
   background: '#FFFFFF',
@@ -46,10 +56,10 @@ function AdminView({ sessionUser }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (range) => {
     setLoading(true); setError(null);
     try {
-      const data = await apiFetch('/stats/admin');
+      const data = await apiFetch(`/stats/admin${statsQuery(range)}`);
       setStats(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement.');
@@ -76,26 +86,25 @@ function AdminView({ sessionUser }) {
       label: 'UTILISATEURS (TOTAL)',
       value: String(stats.total_users ?? 0),
       sub:   'inclut managers et utilisateurs',
-      color: '#4338CA', icon: '👥',
+      color: '#4338CA',
     },
     {
       label: 'ACTIFS CETTE SEMAINE',
       value: String(stats.active_users_this_week ?? 0),
       sub:   'ayant enregistré au moins un log',
-      color: '#7C3AED', icon: '🔥',
+      color: '#7C3AED',
     },
     {
       label: 'HABITUDES PLATEFORME',
       value: String(stats.total_habits ?? 0),
       sub:   `+${stats.new_habits_this_week ?? 0} créées cette semaine`,
-      color: '#059669', icon: '📋',
+      color: '#059669',
     },
     {
       label: 'TAUX DE COMPLÉTION',
       value: `${stats.completion_rate ?? 0}%`,
       sub:   'Semaine en cours (lundi-dimanche) — global plateforme',
       color: (stats.completion_rate ?? 0) >= 70 ? '#059669' : (stats.completion_rate ?? 0) >= 40 ? '#D97706' : '#EF4444',
-      icon:  (stats.completion_rate ?? 0) >= 50 ? '📈' : '📉',
     },
   ] : [];
 
@@ -106,31 +115,32 @@ function AdminView({ sessionUser }) {
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1E1B4B', margin: 0, letterSpacing: '-0.4px' }}>Tableau de bord plateforme</h1>
           <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
             {userFirstName(sessionUser) ? `Bienvenue, ${userFirstName(sessionUser)} — ` : ''}
-            Performance globale des utilisateurs et managers sur la semaine en cours (lundi-dimanche).
+            Performance globale des utilisateurs et managers.
           </p>
         </div>
-        <button onClick={refresh} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', opacity: loading ? 0.6 : 1, flexShrink: 0 }}>
+        <button onClick={() => refresh()} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', opacity: loading ? 0.6 : 1, flexShrink: 0 }}>
           <IconRefresh size={13}/> Actualiser
         </button>
       </div>
+
+      <DateFilter onChange={(range) => refresh(range)} />
+
       {error && (
         <div style={{ padding: '12px 16px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <span>{error}</span>
-          <button onClick={refresh} style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 8, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Réessayer</button>
+          <button onClick={() => refresh()} style={{ flexShrink: 0, padding: '4px 10px', borderRadius: 8, border: '1px solid #FECACA', background: '#fff', color: '#DC2626', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>Réessayer</button>
         </div>
       )}
       {loading && <Spinner />}
       {!loading && !stats && !error && (
         <div style={{ ...CARD, textAlign: 'center', padding: '48px 20px' }}>
-          <p style={{ fontSize: 32, margin: '0 0 12px' }}>📊</p>
           <p style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 6px' }}>Impossible de charger les données</p>
           <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px' }}>Vérifiez votre connexion ou relancez le serveur.</p>
-          <button onClick={refresh} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>Réessayer</button>
+          <button onClick={() => refresh()} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>Réessayer</button>
         </div>
       )}
       {!loading && stats && (stats.total_users ?? 0) === 0 && (
         <div style={{ ...CARD, textAlign: 'center', padding: '48px 20px' }}>
-          <p style={{ fontSize: 32, margin: '0 0 12px' }}>👥</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: '#1E1B4B', margin: '0 0 6px' }}>Aucun compte actif</p>
           <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Créez des utilisateurs ou des managers pour voir les statistiques.</p>
         </div>
@@ -142,8 +152,7 @@ function AdminView({ sessionUser }) {
               <motion.div key={k.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} style={{ ...CARD, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{k.label}</p>
-                  <span style={{ fontSize: 16 }}>{k.icon}</span>
-                </div>
+                  </div>
                 <p style={{ fontSize: 34, fontWeight: 900, color: k.color, margin: 0, lineHeight: 1, letterSpacing: '-1px' }}>{k.value}</p>
                 <p style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>{k.sub}</p>
               </motion.div>
@@ -211,20 +220,19 @@ function AdminView({ sessionUser }) {
             <div style={{ borderRadius: 16, padding: '20px', background: 'linear-gradient(135deg, #4338CA, #7C3AED)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <span style={{ fontSize: 14 }}>✨</span>
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>RÉSUMÉ PLATEFORME</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
                 {[
-                  { label: 'Comptes actifs', value: String(stats.active_users_this_week ?? 0), icon: '🔥' },
-                  { label: 'Comptes totaux', value: String(stats.total_users ?? 0), icon: '👥' },
-                  { label: 'Habitudes totales', value: String(stats.total_habits ?? 0), icon: '📋' },
-                  { label: 'Logs cette semaine', value: String(stats.total_logs_this_week ?? 0), icon: '📊' },
-                  { label: 'Taux de complétion', value: `${stats.completion_rate ?? 0}%`, icon: (stats.completion_rate ?? 0) >= 50 ? '📈' : '📉' },
-                  { label: 'Top catégorie', value: topCategories[0] ? (CATEGORY_LABELS[topCategories[0].category] || topCategories[0].category) : '—', icon: '⭐' },
+                  { label: 'Comptes actifs', value: String(stats.active_users_this_week ?? 0) },
+                  { label: 'Comptes totaux', value: String(stats.total_users ?? 0) },
+                  { label: 'Habitudes totales', value: String(stats.total_habits ?? 0) },
+                  { label: 'Logs cette semaine', value: String(stats.total_logs_this_week ?? 0) },
+                  { label: 'Taux de complétion', value: `${stats.completion_rate ?? 0}%` },
+                  { label: 'Top catégorie', value: topCategories[0] ? (CATEGORY_LABELS[topCategories[0].category] || topCategories[0].category) : '—' },
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.icon} {item.label}</span>
+                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.label}</span>
                     <span style={{ fontSize: 14, fontWeight: 800 }}>{item.value}</span>
                   </div>
                 ))}
@@ -244,10 +252,10 @@ function ManagerView({ sessionUser }) {
   const [loading, setLoading] = useState(false);
   const [error,   setError]   = useState(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (range) => {
     setLoading(true); setError(null);
     try {
-      const data = await apiFetch('/stats/manager');
+      const data = await apiFetch(`/stats/manager${statsQuery(range)}`);
       setStats(data);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement.');
@@ -274,26 +282,25 @@ function ManagerView({ sessionUser }) {
       label: 'MEMBRES ACTIFS',
       value: String(stats.active_members),
       sub:   `${stats.team_size} membre${stats.team_size !== 1 ? 's' : ''} dans l'équipe`,
-      color: '#4338CA', icon: '👥',
+      color: '#4338CA',
     },
     {
       label: 'HABITUDES ÉQUIPE',
       value: String(stats.total_habits),
       sub:   'total des habitudes de l\'équipe',
-      color: '#7C3AED', icon: '📋',
+      color: '#7C3AED',
     },
     {
       label: 'COMPLÉTÉES CETTE SEMAINE',
       value: String(stats.completed_this_week),
       sub:   `sur ${stats.total_logs_this_week} entrées enregistrées`,
-      color: '#059669', icon: '✅',
+      color: '#059669',
     },
     {
       label: 'TAUX DE COMPLÉTION',
       value: `${stats.completion_rate}%`,
       sub:   'Semaine en cours (lundi-dimanche) — équipe complète',
       color: stats.completion_rate >= 70 ? '#059669' : stats.completion_rate >= 40 ? '#D97706' : '#EF4444',
-      icon:  stats.completion_rate >= 50 ? '📈' : '📉',
     },
   ] : [];
 
@@ -306,13 +313,15 @@ function ManagerView({ sessionUser }) {
           <h1 style={{ fontSize: 24, fontWeight: 800, color: '#1E1B4B', margin: 0, letterSpacing: '-0.4px' }}>Tableau de bord équipe</h1>
           <p style={{ fontSize: 13, color: '#64748B', marginTop: 4 }}>
             {userFirstName(sessionUser) ? `Bienvenue, ${userFirstName(sessionUser)} — ` : ''}
-            Performance de votre équipe sur la semaine en cours (lundi-dimanche).
+            Performance de votre équipe.
           </p>
         </div>
-        <button onClick={refresh} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', opacity: loading ? 0.6 : 1, flexShrink: 0 }}>
+        <button onClick={() => refresh()} disabled={loading} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 14px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 12, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit', opacity: loading ? 0.6 : 1, flexShrink: 0 }}>
           <IconRefresh size={13}/> Actualiser
         </button>
       </div>
+
+      <DateFilter onChange={(range) => refresh(range)} />
 
       {error && (
         <div style={{ padding: '12px 16px', borderRadius: 10, background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
@@ -324,7 +333,6 @@ function ManagerView({ sessionUser }) {
 
       {!loading && !stats && !error && (
         <div style={{ ...CARD, textAlign: 'center', padding: '48px 20px' }}>
-          <p style={{ fontSize: 32, margin: '0 0 12px' }}>📊</p>
           <p style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 6px' }}>Impossible de charger les données</p>
           <p style={{ fontSize: 13, color: '#64748B', margin: '0 0 16px' }}>Vérifiez votre connexion ou relancez le serveur.</p>
           <button onClick={refresh} style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #E5E7EB', background: '#fff', fontSize: 13, fontWeight: 600, color: '#374151', cursor: 'pointer', fontFamily: 'inherit' }}>Réessayer</button>
@@ -333,7 +341,6 @@ function ManagerView({ sessionUser }) {
 
       {!loading && stats && stats.team_size === 0 && (
         <div style={{ ...CARD, textAlign: 'center', padding: '48px 20px' }}>
-          <p style={{ fontSize: 32, margin: '0 0 12px' }}>👥</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: '#1E1B4B', margin: '0 0 6px' }}>Aucun membre dans l'équipe</p>
           <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Ajoutez des membres via la section "Mon équipe".</p>
         </div>
@@ -347,8 +354,7 @@ function ManagerView({ sessionUser }) {
               <motion.div key={k.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }} style={{ ...CARD, position: 'relative', overflow: 'hidden' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{k.label}</p>
-                  <span style={{ fontSize: 16 }}>{k.icon}</span>
-                </div>
+                  </div>
                 <p style={{ fontSize: 34, fontWeight: 900, color: k.color, margin: 0, lineHeight: 1, letterSpacing: '-1px' }}>{k.value}</p>
                 <p style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>{k.sub}</p>
               </motion.div>
@@ -438,20 +444,19 @@ function ManagerView({ sessionUser }) {
               <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
               <div style={{ position: 'absolute', bottom: -30, left: -10, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }}/>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-                <span style={{ fontSize: 14 }}>✨</span>
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>RÉSUMÉ ÉQUIPE — LUNDI À DIMANCHE</span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 11, position: 'relative' }}>
                 {[
-                  { label: 'Taille équipe',        value: String(stats.team_size),                                                              icon: '👥' },
-                  { label: 'Membres actifs',        value: String(stats.active_members),                                                         icon: '🔥' },
-                  { label: 'Habitudes totales',     value: String(stats.total_habits),                                                           icon: '📋' },
-                  { label: 'Logs cette semaine',    value: String(stats.total_logs_this_week),                                                   icon: '📊' },
-                  { label: 'Taux de complétion',    value: `${stats.completion_rate}%`,                                                          icon: stats.completion_rate >= 50 ? '📈' : '📉' },
-                  ...(stats.most_active_user ? [{ label: 'Meilleur membre', value: (stats.most_active_user.name || '—').split(' ')[0], icon: '🏆' }] : []),
+                  { label: 'Taille équipe',        value: String(stats.team_size) },
+                  { label: 'Membres actifs',        value: String(stats.active_members) },
+                  { label: 'Habitudes totales',     value: String(stats.total_habits) },
+                  { label: 'Logs cette semaine',    value: String(stats.total_logs_this_week) },
+                  { label: 'Taux de complétion',    value: `${stats.completion_rate}%` },
+                  ...(stats.most_active_user ? [{ label: 'Meilleur membre', value: (stats.most_active_user.name || '—').split(' ')[0] }] : []),
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.icon} {item.label}</span>
+                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.label}</span>
                     <span style={{ fontSize: 14, fontWeight: 800 }}>{item.value}</span>
                   </div>
                 ))}

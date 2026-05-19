@@ -1,3 +1,4 @@
+import { paginate }   from "@/helpers/pagination.helper.js";
 import { HabitLogs }  from "../models/HabitLog.model.js";
 import { Habits }     from "@/modules/habits/models/Habit.model.js";
 import { AppError }   from "@/core/errors.js";
@@ -78,7 +79,11 @@ class HabitLogsService {
     return HabitLogs.insertOne({ ...rest, habit_id: habitId, user_id: userId });
   }
 
-  static async getAllLogs() { return HabitLogs.find(); }
+  static async getAllLogs(query = {}) {
+    const page  = parseInt(query?.page)  || 1;
+    const limit = parseInt(query?.limit) || 10;
+    return paginate(HabitLogs, {}, page, limit, { sort: { createdAt: -1 } });
+  }
 
   static async getLogById(id, userId, permissions) {
     const log = await HabitLogs.findById(id);

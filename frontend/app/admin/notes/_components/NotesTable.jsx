@@ -1,6 +1,6 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { IconRefresh } from '@tabler/icons-react';
+import { IconChevronLeft, IconChevronRight, IconRefresh } from '@tabler/icons-react';
 
 import { apiFetch } from '@/lib/api';
 import { getToken } from '@/lib/auth';
@@ -259,8 +259,8 @@ export function NotesTable() {
             <div className="adm-pagination mt-2">
               <span className="adm-pagination-info">{pageStart + 1}–{pageEnd} sur {filtered.length}</span>
               <div className="adm-pagination-btns">
-                <button className="adm-pagination-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}>← Précédent</button>
-                <button className="adm-pagination-btn" disabled={pageEnd >= filtered.length} onClick={() => setPage(p => p + 1)}>Suivant →</button>
+                <button className="adm-pagination-btn" disabled={page === 0} onClick={() => setPage(p => p - 1)}><IconChevronLeft size={14} /></button>
+                <button className="adm-pagination-btn" disabled={pageEnd >= filtered.length} onClick={() => setPage(p => p + 1)}><IconChevronRight size={14} /></button>
               </div>
             </div>
           )}

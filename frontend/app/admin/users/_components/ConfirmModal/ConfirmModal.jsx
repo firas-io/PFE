@@ -3,12 +3,13 @@ import React from 'react';
 
 import { Modal } from '@/components/Modal';
 
-export const ConfirmModal = ({ show, onHide, onConfirm, title, message, confirmLabel, variant = 'danger', isLoading }) => {
+export const ConfirmModal = ({ show, onHide, onConfirm, title, message, confirmLabel, variant = 'danger', isLoading, subtitle }) => {
+  const modalSubtitle = subtitle === undefined ? 'Cette action peut être irréversible.' : subtitle;
   return (
     <Modal
       open={show}
       title={title}
-      subtitle="Cette action peut être irréversible."
+      subtitle={modalSubtitle || undefined}
       onClose={onHide}
       footer={
         <div className="d-flex justify-content-between w-100">

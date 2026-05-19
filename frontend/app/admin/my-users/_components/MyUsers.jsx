@@ -4,7 +4,6 @@ import {
   IconEdit,
   IconPlus,
   IconRefresh,
-  IconTrash,
   IconUserOff,
 } from '@tabler/icons-react';
 
@@ -13,6 +12,8 @@ import { getToken } from '@/lib/auth';
 import { userDepartment, userFirstName, userLastName } from '@/lib/userDisplay';
 import { Modal } from '@/components/Modal';
 import { showToast } from '@/lib/adminToast';
+import { ConfirmModal } from '../../users/_components/ConfirmModal';
+import Pagination from '@/components/Pagination';
 
 const EMPTY_CREATE = { nom: '', prenom: '', email: '', mot_de_passe: '', departement: '' };
 const EMPTY_EDIT   = { nom: '', prenom: '', email: '', departement: '' };
@@ -36,6 +37,10 @@ export function MyUsers() {
   const [editForm,     setEditForm]     = useState(EMPTY_EDIT);
   const [search,       setSearch]       = useState('');
   const [filterStatut, setFilterStatut] = useState('all');
+  const [currentPage,  setCurrentPage]  = useState(1);
+  const [statusConfirm, setStatusConfirm] = useState(null);
+  const [statusToggleLoading, setStatusToggleLoading] = useState(false);
+  const PAGE_SIZE = 5;
 
   useEffect(() => { setToken(getToken()); }, []);
 
@@ -64,6 +69,10 @@ export function MyUsers() {
       return matchSearch && matchStatut;
     });
   }, [users, search, filterStatut]);
+
+  useEffect(() => { setCurrentPage(1); }, [search, filterStatut]);
+
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   const openModal = (modal, data = null) => {
     setActiveModal(modal);
@@ -154,18 +163,23 @@ export function MyUsers() {
     }
   };
 
-  const handleToggle = useCallback(async (user) => {
+  const handleConfirmStatusToggle = async () => {
+    if (!statusConfirm) return;
+    setStatusToggleLoading(true);
     try {
-      const updated = await apiFetch(`/managers/users/${user._id}`, {
+      const updated = await apiFetch(`/managers/users/${statusConfirm._id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ isActive: !user.isActive }),
+        body: JSON.stringify({ isActive: !statusConfirm.isActive }),
       });
-      setUsers(prev => prev.map(u => u._id === user._id ? updated : u));
-      showToast(`Membre ${!user.isActive ? 'activé' : 'désactivé'}.`, 'success');
+      setUsers(prev => prev.map(u => u._id === statusConfirm._id ? updated : u));
+      showToast(`Membre ${!statusConfirm.isActive ? 'activé' : 'désactivé'}.`, 'success');
+      setStatusConfirm(null);
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur.', 'danger');
+    } finally {
+      setStatusToggleLoading(false);
     }
-  }, []);
+  };
 
   if (!token) {
     return (
@@ -282,7 +296,7 @@ export function MyUsers() {
                         {users.length === 0 ? 'Aucun membre dans votre équipe.' : 'Aucun résultat pour ces filtres.'}
                       </td>
                     </tr>
-                  ) : filtered.map(u => (
+                  ) : paginated.map(u => (
                     <tr key={u._id}>
                       <td><div className="fw-medium">{userFirstName(u)} {userLastName(u)}</div></td>
                       <td className="text-secondary" style={{ fontSize: 12 }}>{u.email}</td>
@@ -302,17 +316,9 @@ export function MyUsers() {
                             className="adm-btn-icon adm-btn-icon--warn"
                             type="button"
                             title={u.isActive ? 'Désactiver' : 'Réactiver'}
-                            onClick={() => handleToggle(u)}
+                            onClick={() => setStatusConfirm(u)}
                           >
                             <IconUserOff size={15} />
-                          </button>
-                          <button
-                            className="adm-btn-icon adm-btn-icon--danger"
-                            type="button"
-                            title="Supprimer"
-                            onClick={() => openModal('delete', u)}
-                          >
-                            <IconTrash size={15} />
                           </button>
                         </div>
                       </td>
@@ -334,7 +340,7 @@ export function MyUsers() {
                 </div>
                 <p>{users.length === 0 ? 'Aucun membre dans votre équipe.' : 'Aucun résultat pour ces filtres.'}</p>
               </div>
-            ) : filtered.map(u => (
+            ) : paginated.map(u => (
               <div key={u._id} className="card">
                 <div className="card-body">
                   <div className="d-flex justify-content-between align-items-start mb-2">
@@ -351,18 +357,39 @@ export function MyUsers() {
                     <button className="adm-btn-icon" type="button" title="Modifier" onClick={() => openModal('edit', u)}>
                       <IconEdit size={15} />
                     </button>
-                    <button className="adm-btn-icon adm-btn-icon--warn" type="button" title={u.isActive ? 'Désactiver' : 'Réactiver'} onClick={() => handleToggle(u)}>
+                    <button className="adm-btn-icon adm-btn-icon--warn" type="button" title={u.isActive ? 'Désactiver' : 'Réactiver'} onClick={() => setStatusConfirm(u)}>
                       <IconUserOff size={15} />
-                    </button>
-                    <button className="adm-btn-icon adm-btn-icon--danger" type="button" title="Supprimer" onClick={() => openModal('delete', u)}>
-                      <IconTrash size={15} />
                     </button>
                   </div>
                 </div>
               </div>
             ))}
           </div>
+
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(filtered.length / PAGE_SIZE)}
+            onPageChange={setCurrentPage}
+          />
         </>
+      )}
+
+      {statusConfirm && (
+        <ConfirmModal
+          show
+          onHide={() => setStatusConfirm(null)}
+          onConfirm={handleConfirmStatusToggle}
+          title="Confirmer le changement de statut"
+          message={
+            `${statusConfirm.isActive ? 'Désactiver' : 'Réactiver'} ${
+              userFirstName(statusConfirm)
+            } ${userLastName(statusConfirm)} ? Êtes-vous sûr(e) ?`
+          }
+          subtitle={null}
+          confirmLabel="Oui, confirmer"
+          variant={statusConfirm.isActive ? 'warning' : 'success'}
+          isLoading={statusToggleLoading}
+        />
       )}
 
       {/* ── Modal : Créer un membre ── */}
@@ -385,19 +412,27 @@ export function MyUsers() {
         <form id="form-create-member" onSubmit={handleCreate}>
           <div className="row g-3">
             <div className="col-md-6">
-              <label className="form-label">Nom</label>
+              <label className="form-label">
+                Nom <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" value={createForm.nom} onChange={e => setCreateForm(f => ({ ...f, nom: e.target.value }))} required />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Prénom</label>
+              <label className="form-label">
+                Prénom <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" value={createForm.prenom} onChange={e => setCreateForm(f => ({ ...f, prenom: e.target.value }))} required />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Email</label>
+              <label className="form-label">
+                Email <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" type="email" value={createForm.email} onChange={e => setCreateForm(f => ({ ...f, email: e.target.value }))} required />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Mot de passe</label>
+              <label className="form-label">
+                Mot de passe <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" type="password" value={createForm.mot_de_passe} onChange={e => setCreateForm(f => ({ ...f, mot_de_passe: e.target.value }))} required />
             </div>
             <div className="col-md-6">
@@ -428,15 +463,21 @@ export function MyUsers() {
         <form id="form-edit-member" onSubmit={handleEdit}>
           <div className="row g-3">
             <div className="col-md-6">
-              <label className="form-label">Nom</label>
+              <label className="form-label">
+                Nom <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" value={editForm.nom} onChange={e => setEditForm(f => ({ ...f, nom: e.target.value }))} required />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Prénom</label>
+              <label className="form-label">
+                Prénom <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" value={editForm.prenom} onChange={e => setEditForm(f => ({ ...f, prenom: e.target.value }))} required />
             </div>
             <div className="col-md-6">
-              <label className="form-label">Email</label>
+              <label className="form-label">
+                Email <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input className="form-control" type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} required />
             </div>
             <div className="col-md-6">

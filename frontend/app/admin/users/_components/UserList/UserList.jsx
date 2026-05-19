@@ -4,6 +4,7 @@ import { IconRefresh } from '@tabler/icons-react';
 
 import { apiFetch } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { canViewUsers } from '@/src/utils/permissions';
 
 import { UserTable } from './UserTable';
 
@@ -20,13 +21,14 @@ export const UserList = () => {
   const [usersLoading, setUsersLoading]       = useState(false);
   const [error, setError]               = useState(null);
 
-  const isAdmin = (currentUser?.role ?? '').toString().toLowerCase() === 'admin';
+  const hasAccess = canViewUsers(currentUser);
 
   const refreshManagers = useCallback(async () => {
     setManagersLoading(true);
     setError(null);
     try {
-      const managersData = await apiFetch('/managers');
+      const result = await apiFetch('/managers?limit=100');
+      const managersData = result?.data ?? (Array.isArray(result) ? result : []);
       setManagers(managersData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les managers.');
@@ -70,10 +72,10 @@ export const UserList = () => {
 
   if (!mounted) return null;
 
-  if (!isAdmin) {
+  if (!hasAccess) {
     return (
       <div className="alert alert-warning mb-3">
-        Accès refusé. Seul un administrateur peut accéder à cette page.
+        Accès refusé. Permission USERS_VIEW ou MANAGERS_MANAGE requise.
       </div>
     );
   }

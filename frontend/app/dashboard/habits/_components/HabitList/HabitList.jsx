@@ -1,10 +1,14 @@
 'use client';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { apiFetch } from '@/lib/api';
-import { getUser } from '@/lib/auth';
+import { searchHabits } from '@/lib/search';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { getUser, setUser as storeUser } from '@/lib/auth';
+import { canCreateHabits, canManageHabits } from '@/src/utils/permissions';
 import { useToast } from '@/components/Toast';
 import { useCategories } from '@/hooks/useCategories';
-import { priorityRank, statusRank, CATEGORY_LABELS, FREQUENCY_LABELS, PRIORITY_LABELS } from '../../_constants';
+import { priorityRank, statusRank } from '../../_constants';
 import { HabitHeader } from './HabitHeader';
 import { HabitTable } from './HabitTable';
 import { AddHabitModal } from '../AddHabitModal';
@@ -14,8 +18,18 @@ import { NoteHistoryModal } from '../NoteHistoryModal';
 
 export const HabitList = () => {
   const { toast } = useToast();
-  const { categories: allCategories } = useCategories();
+  const searchParams = useSearchParams();
+  const { categories: allCategories, reload: reloadCategories } = useCategories();
+  const [currentUser, setCurrentUser] = useState(null);
+  const canCreate = canCreateHabits(currentUser);
+  const canManage = canManageHabits(currentUser);
   const [habits, setHabits] = useState([]);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const debouncedSearch = useDebouncedValue(search.trim(), 350);
   const [todayStatus, setTodayStatus] = useState({});
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -23,10 +37,6 @@ export const HabitList = () => {
   // User's onboarding-selected categories (slugs)
   const [userCategories, setUserCategories] = useState([]);
   const [categoryFilter, setCategoryFilter] = useState('all'); // 'all' | slug
-
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [search, setSearch] = useState('');
-  const [sortBy, setSortBy] = useState('recent');
 
   const [showAdd, setShowAdd] = useState(false);
   const [editHabit, setEditHabit] = useState(null);
@@ -38,11 +48,49 @@ export const HabitList = () => {
   const [showHistory, setShowHistory] = useState(false);
   const [weeklyCompletionMap, setWeeklyCompletionMap] = useState({});
 
-  // Load onboarding categories once on mount — only for role 'utilisateur'
+  // Load user + permissions; sync selected category slugs from API
   useEffect(() => {
     const u = getUser();
-    setUserCategories(u?.role === 'utilisateur' ? (u?.categories ?? []) : []);
+    setCurrentUser(u);
+    setUserCategories(u?.categories ?? []);
+    apiFetch('/users/me/categories')
+      .then(data => { if (Array.isArray(data?.categories)) setUserCategories(data.categories); })
+      .catch(() => {});
+    apiFetch('/profile')
+      .then((profile) => {
+        if (!profile?.permissions) return;
+        const updated = { ...u, permissions: profile.permissions };
+        setCurrentUser(updated);
+        storeUser(updated);
+      })
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('add') === '1' && canCreate) {
+      setShowAdd(true);
+    }
+  }, [searchParams, canCreate]);
+
+  const refreshUserCategories = useCallback(async () => {
+    try {
+      const data = await apiFetch('/users/me/categories');
+      if (Array.isArray(data?.categories)) {
+        setUserCategories(data.categories);
+        const u = getUser();
+        if (u) storeUser({ ...u, categories: data.categories });
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    if (showAdd || editHabit) {
+      refreshUserCategories();
+      reloadCategories();
+    }
+  }, [showAdd, editHabit, refreshUserCategories, reloadCategories]);
 
   // Custom categories (approved via tickets, is_custom: true)
   const customCategories = useMemo(
@@ -51,12 +99,17 @@ export const HabitList = () => {
   );
 
   // Enrich user category slugs with full metadata + append custom categories
-  const userCategoryMeta = useMemo(
-    () => [
-      ...allCategories.filter(c => userCategories.includes(c.slug)),
+  const userCategoryMeta = useMemo(() => {
+    const selectedLower = new Set(userCategories.map((s) => String(s).toLowerCase()));
+    return [
+      ...allCategories.filter((c) => selectedLower.has(String(c.slug).toLowerCase())),
       ...customCategories,
-    ],
-    [allCategories, userCategories, customCategories]
+    ];
+  }, [allCategories, userCategories, customCategories]);
+
+  const allowedCategorySlugs = useMemo(
+    () => userCategoryMeta.map((c) => c.slug),
+    [userCategoryMeta]
   );
 
   const loadHabits = useCallback(async () => {
@@ -84,6 +137,39 @@ export const HabitList = () => {
     loadHabits();
     loadTodayStatus();
   }, [loadHabits, loadTodayStatus]);
+
+  useEffect(() => {
+    if (!debouncedSearch) {
+      setSearchResults(null);
+      return;
+    }
+    let cancelled = false;
+    setSearchLoading(true);
+    searchHabits({
+      q: debouncedSearch,
+      limit: 100,
+      includeArchived: true,
+      statut: statusFilter !== 'all' ? statusFilter : undefined,
+      categorie: categoryFilter !== 'all' ? categoryFilter : undefined,
+    })
+      .then((res) => {
+        if (!cancelled) setSearchResults(res.data ?? []);
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setSearchResults([]);
+          toast({
+            variant: 'error',
+            title: 'Recherche',
+            description: err instanceof Error ? err.message : 'Erreur de recherche',
+          });
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSearchLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [debouncedSearch, statusFilter, categoryFilter, toast]);
 
   const todayIndex = (() => {
     const d = new Date().getDay();
@@ -122,10 +208,10 @@ export const HabitList = () => {
   }, [habits, todayStatus, todayIndex]);
 
   const filteredHabits = useMemo(() => {
-    let items = habits;
+    let items = debouncedSearch && searchResults !== null ? searchResults : habits;
 
-    // Category tab filter
-    if (categoryFilter !== 'all') {
+    // Category tab filter (client-side when not already sent to API)
+    if (!debouncedSearch && categoryFilter !== 'all') {
       // Custom category tabs filter by ticket_id, normal tabs by categorie slug
       const isCustomSlug = customCategories.some(c => c.slug === categoryFilter);
       if (isCustomSlug) {
@@ -133,29 +219,22 @@ export const HabitList = () => {
       } else {
         items = items.filter(h => h.categorie === categoryFilter);
       }
-    } else if (userCategories.length > 0) {
-      // Show onboarding-category habits + custom-category habits (categorie_ticket_id set)
+    } else if (!debouncedSearch && userCategories.length > 0) {
+      const selectedLower = new Set(userCategories.map((s) => String(s).toLowerCase()));
       items = items.filter(h =>
-        userCategories.includes(h.categorie) ||
+        selectedLower.has(String(h.categorie ?? '').toLowerCase()) ||
         (h.categorie === 'autre' && !!h.categorie_ticket_id)
       );
     }
 
-    if (statusFilter !== 'all') items = items.filter((h) => h.statut === statusFilter);
-    const q = search.trim().toLowerCase();
-    if (q) {
-      items = items.filter((h) => {
-        const text = `${h.nom ?? h.titre ?? ''} ${h.description ?? ''} ${h.categorie_label ?? ''} ${CATEGORY_LABELS[h.categorie] ?? ''} ${FREQUENCY_LABELS[h.frequence] ?? ''} ${PRIORITY_LABELS[h.priorite] ?? ''}`.toLowerCase();
-        return text.includes(q);
-      });
-    }
+    if (!debouncedSearch && statusFilter !== 'all') items = items.filter((h) => h.statut === statusFilter);
     return [...items].sort((a, b) => {
       if (sortBy === 'priority_desc') return priorityRank(b.priorite) - priorityRank(a.priorite);
       if (sortBy === 'priority_asc') return priorityRank(a.priorite) - priorityRank(b.priorite);
       if (sortBy === 'status') return statusRank(a.statut) - statusRank(b.statut);
       return b._id.localeCompare(a._id);
     });
-  }, [habits, statusFilter, search, sortBy, categoryFilter, userCategories]);
+  }, [habits, searchResults, debouncedSearch, statusFilter, sortBy, categoryFilter, userCategories, customCategories]);
 
   const handleToggleDay = async (habitId, dayIndex) => {
     const isToday = dayIndex === todayIndex;
@@ -217,9 +296,19 @@ export const HabitList = () => {
   };
 
   const handleArchive = async (habitId) => {
+    const habit = habits.find(h => String(h._id) === String(habitId));
+    const isGlobal = !!(habit?.is_global || habit?.created_by_admin);
     setBusy(true);
     try {
-      await apiFetch(`/habits/${habitId}/status`, { method: 'PATCH', body: JSON.stringify({ statut: 'archived' }) });
+      if (isGlobal) {
+        // Archive only in personal settings — does not affect other users
+        await apiFetch(`/habits/${habitId}/my-settings`, {
+          method: 'PATCH',
+          body: JSON.stringify({ statut_perso: 'archive' }),
+        });
+      } else {
+        await apiFetch(`/habits/${habitId}/status`, { method: 'PATCH', body: JSON.stringify({ statut: 'archived' }) });
+      }
       await loadHabits();
       toast({ variant: 'info', title: 'Habitude archivée' });
     } catch (err) {
@@ -278,9 +367,20 @@ export const HabitList = () => {
   return (
     <div className="mx-auto w-100 max-w-7xl space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="fs-2 fw-bold tracking-tight text-body">Mes habitudes</h1>
-        <p className="mt-1 text-sm text-muted">Gérez, suivez et améliorez vos habitudes au quotidien.</p>
+      <div className="d-flex flex-column gap-3 flex-sm-row align-items-sm-start justify-content-between">
+        <div>
+          <h1 className="fs-2 fw-bold tracking-tight text-body">Mes habitudes</h1>
+          <p className="mt-1 text-sm text-muted">Gérez, suivez et améliorez vos habitudes au quotidien.</p>
+        </div>
+        {canCreate && (
+          <button
+            type="button"
+            onClick={() => setShowAdd(true)}
+            className="btn btn-primary d-inline-flex align-items-center gap-2 rounded-4 px-3 py-2 text-sm fw-semibold flex-shrink-0"
+          >
+            Ajouter une habitude
+          </button>
+        )}
       </div>
 
       <div className="card-elevated overflow-hidden">
@@ -291,7 +391,6 @@ export const HabitList = () => {
           onSearch={setSearch}
           sortBy={sortBy}
           onSortBy={setSortBy}
-          onAdd={() => setShowAdd(true)}
           userCategoryMeta={userCategoryMeta}
           categoryFilter={categoryFilter}
           onCategoryFilter={setCategoryFilter}
@@ -299,7 +398,7 @@ export const HabitList = () => {
         <HabitTable
           habits={filteredHabits}
           todayStatus={todayStatus}
-          loading={loading}
+          loading={loading || searchLoading}
           disabled={busy}
           onEdit={(habit) => setEditHabit(habit)}
           onClone={handleClone}
@@ -310,6 +409,7 @@ export const HabitList = () => {
           onUpdateDate={handleUpdateDate}
           weeklyCompletionMap={weeklyCompletionMap}
           todayIndex={todayIndex}
+          canManage={canManage}
         />
       </div>
 
@@ -317,7 +417,6 @@ export const HabitList = () => {
         show={showAdd}
         onClose={() => setShowAdd(false)}
         onSuccess={() => { setShowAdd(false); loadHabits(); }}
-        allowedCategories={userCategories}
       />
 
       <UpdateHabitModal
@@ -325,7 +424,7 @@ export const HabitList = () => {
         habit={editHabit}
         onClose={() => setEditHabit(null)}
         onSuccess={() => { setEditHabit(null); loadHabits(); }}
-        allowedCategories={userCategories}
+        allowedCategories={allowedCategorySlugs.length > 0 ? allowedCategorySlugs : userCategories}
       />
 
       <NotesModal

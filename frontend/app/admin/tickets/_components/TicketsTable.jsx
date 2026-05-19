@@ -1,13 +1,15 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { IconPlus, IconRefresh } from '@tabler/icons-react';
+import { IconPlus } from '@tabler/icons-react';
 
 import { apiFetch } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { canManageCategoryTickets } from '@/src/utils/permissions';
 import { Modal } from '@/components/Modal';
 import { showToast } from '@/lib/adminToast';
+import Pagination from '@/components/Pagination';
 
-const TABS = [
+const STATUS_TABS = [
   { key: 'all',       label: 'Tous' },
   { key: 'pending',   label: 'Pending' },
   { key: 'in_review', label: 'In review' },
@@ -25,6 +27,11 @@ function StatusBadge({ status }) {
     case 'rejected':  return <span className="adm-status adm-status--rejected">Rejeté</span>;
     default:          return <span className="adm-status adm-status--inactive">{status}</span>;
   }
+}
+
+function TypeBadge({ type }) {
+  if (type === 'habitude') return <span className="badge bg-primary-subtle text-primary">Habitude</span>;
+  return <span className="badge bg-success-subtle text-success">Catégorie</span>;
 }
 
 function ScopeBadge({ scope }) {
@@ -73,41 +80,63 @@ function TicketActions({ ticket, onStatusChange, onOpenApprove }) {
 export function TicketsTable() {
   const [token,       setToken]       = useState(null);
   const [tickets,     setTickets]     = useState([]);
+  const [pagination,  setPagination]  = useState({ total: 0, pages: 1, currentPage: 1 });
   const [loading,     setLoading]     = useState(true);
   const [error,       setError]       = useState(null);
   const [activeTab,   setActiveTab]   = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
   const [activeModal, setActiveModal] = useState(null);
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [formError,   setFormError]   = useState(null);
   const [isLoading,   setIsLoading]   = useState(false);
 
-  const [approveModal,  setApproveModal]  = useState(null); // { id, proposedName }
-  const [categoryName,  setCategoryName]  = useState('');
+  const [approveModal,   setApproveModal]   = useState(null);
+  const [adminNote,      setAdminNote]      = useState('');
   const [approveLoading, setApproveLoading] = useState(false);
 
-  const role    = (getUser()?.role ?? '').toString().toLowerCase();
-  const isAdmin = role === 'admin';
+  const isAdmin = canManageCategoryTickets(getUser());
 
   useEffect(() => { setToken(getToken()); }, []);
 
-  // ── Data load — endpoint selon le rôle ────────────────────────────────────
-  const refresh = useCallback(async () => {
+  // ── Data load ──────────────────────────────────────────────────────────────
+  const refresh = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const endpoint = isAdmin ? '/category-tickets' : '/category-tickets/my';
-      const data = await apiFetch(endpoint);
-      setTickets(Array.isArray(data) ? data : []);
+      if (isAdmin) {
+        const params = new URLSearchParams({ page: String(page), limit: '5' });
+        if (activeTab !== 'all')    params.set('status', activeTab);
+        const result = await apiFetch(`/category-tickets?${params}`);
+        if (result && result.data) {
+          setTickets(result.data);
+          setPagination(result.pagination);
+        } else {
+          setTickets(Array.isArray(result) ? result : []);
+        }
+      } else {
+        const data = await apiFetch('/category-tickets/my');
+        setTickets(Array.isArray(data) ? data : []);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement des tickets.');
     } finally {
       setLoading(false);
     }
-  }, [isAdmin]);
+  }, [isAdmin, activeTab]);
 
-  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+  useEffect(() => { if (token) refresh(1); }, [token, refresh]);
 
-  // ── Admin : changement de statut (hors approbation) ──────────────────────
+  function handlePageChange(page) {
+    setCurrentPage(page);
+    refresh(page);
+  }
+
+  function handleTabChange(tab) {
+    setActiveTab(tab);
+    setCurrentPage(1);
+  }
+
+  // ── Admin : changement de statut ───────────────────────────────────────────
   const handleStatusChange = useCallback(async (id, newStatus) => {
     try {
       await apiFetch(`/category-tickets/${id}/status`, {
@@ -123,49 +152,51 @@ export function TicketsTable() {
 
   // ── Admin : ouvrir la modale d'approbation ────────────────────────────────
   const openApprove = useCallback((ticket) => {
-    const prefill = ticket.proposed_category_name || ticket.title || '';
-    setCategoryName(prefill);
-    setApproveModal({ id: ticket._id });
+    const prefill = ticket.requested_name || ticket.proposed_category_name || ticket.title || '';
+    setAdminNote(prefill);
+    setApproveModal({ id: ticket._id, type: ticket.type || 'categorie' });
   }, []);
 
-  // ── Admin : confirmer l'approbation avec le nom de catégorie ─────────────
+  // ── Admin : confirmer l'approbation ───────────────────────────────────────
   const handleApprove = useCallback(async (e) => {
     e.preventDefault();
-    if (!approveModal || !categoryName.trim()) return;
+    if (!approveModal) return;
     setApproveLoading(true);
     try {
       await apiFetch(`/category-tickets/${approveModal.id}/status`, {
         method: 'PATCH',
-        body: JSON.stringify({ status: 'done', admin_note: categoryName.trim() }),
+        body: JSON.stringify({ status: 'done', admin_note: adminNote.trim() }),
       });
       setTickets(prev => prev.map(t =>
-        t._id === approveModal.id
-          ? { ...t, status: 'done', admin_note: categoryName.trim() }
-          : t
+        t._id === approveModal.id ? { ...t, status: 'done', admin_note: adminNote.trim() } : t
       ));
-      showToast(`Ticket approuvé — catégorie « ${categoryName.trim()} » créée.`, 'success');
+      showToast('Ticket approuvé.', 'success');
       setApproveModal(null);
-      setCategoryName('');
+      setAdminNote('');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de l\'approbation.', 'danger');
     } finally {
       setApproveLoading(false);
     }
-  }, [approveModal, categoryName]);
+  }, [approveModal, adminNote]);
 
   // ── Manager : créer un ticket ──────────────────────────────────────────────
   const handleCreate = async (e) => {
     e.preventDefault();
+    if (!form.description?.trim()) {
+      setFormError('La description est requise.');
+      return;
+    }
     setIsLoading(true);
     setFormError(null);
     try {
       const created = await apiFetch('/category-tickets', {
         method: 'POST',
         body: JSON.stringify({
-          title:                  form.title.trim(),
-          description:            form.description.trim() || undefined,
-          proposed_category_name: form.proposed_category_name.trim() || undefined,
-          scope:                  form.scope,
+          type:           'categorie',
+          requested_name: form.proposed_category_name.trim() || form.title.trim(),
+          description:    form.description.trim(),
+          scope:          form.scope,
         }),
       });
       setTickets(prev => [created, ...prev]);
@@ -179,14 +210,13 @@ export function TicketsTable() {
     }
   };
 
-
-  // ── Filtre par onglet ──────────────────────────────────────────────────────
+  // ── Filtre client-side (manager uniquement, pas de pagination serveur) ─────
   const filtered = useMemo(() => {
+    if (isAdmin) return tickets;
     if (activeTab === 'all') return tickets;
     return tickets.filter(t => t.status === activeTab);
-  }, [tickets, activeTab]);
+  }, [tickets, activeTab, isAdmin]);
 
-  // ── Token spinner ──────────────────────────────────────────────────────────
   if (!token) {
     return (
       <div className="text-center py-5">
@@ -201,9 +231,9 @@ export function TicketsTable() {
     <div className="adm-page">
       <div className="adm-header">
         <div>
-          <h1 className="adm-title">Tickets de catégorie</h1>
+          <h1 className="adm-title">Tickets</h1>
           <p className="adm-subtitle">
-            {isAdmin ? 'Demandes d\'ajout de catégories soumises par les utilisateurs' : 'Vos demandes d\'ajout de catégories'}
+            {isAdmin ? 'Demandes soumises par les utilisateurs' : 'Vos demandes'}
           </p>
         </div>
         <div className="adm-header-actions">
@@ -216,14 +246,24 @@ export function TicketsTable() {
         </div>
       </div>
 
+      {/* Status tabs */}
       <ul className="nav nav-tabs mb-3">
-        {TABS.map(tab => (
+        {STATUS_TABS.map(tab => (
           <li className="nav-item" key={tab.key}>
-            <button type="button" className={`nav-link ${activeTab === tab.key ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
+            <button type="button"
+              className={`nav-link ${activeTab === tab.key ? 'active' : ''}`}
+              onClick={() => handleTabChange(tab.key)}>
               {tab.label}
-              <span className="badge bg-secondary ms-1" style={{ fontSize: '0.625rem' }}>
-                {tab.key === 'all' ? tickets.length : tickets.filter(t => t.status === tab.key).length}
-              </span>
+              {!isAdmin && (
+                <span className="badge bg-secondary ms-1" style={{ fontSize: '0.625rem' }}>
+                  {tab.key === 'all' ? tickets.length : tickets.filter(t => t.status === tab.key).length}
+                </span>
+              )}
+              {isAdmin && tab.key === 'all' && pagination.total > 0 && (
+                <span className="badge bg-secondary ms-1" style={{ fontSize: '0.625rem' }}>
+                  {pagination.total}
+                </span>
+              )}
             </button>
           </li>
         ))}
@@ -247,6 +287,7 @@ export function TicketsTable() {
                   <th>Date</th>
                   <th>Titre</th>
                   <th>Description</th>
+                  <th>Type</th>
                   <th>Scope</th>
                   <th>Statut</th>
                   {isAdmin && <th style={{ width: 1 }} />}
@@ -255,7 +296,7 @@ export function TicketsTable() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={isAdmin ? 7 : 5} className="text-center text-secondary py-4">
+                    <td colSpan={isAdmin ? 8 : 6} className="text-center text-secondary py-4">
                       {tickets.length > 0 ? 'Aucun ticket dans cet onglet.' : 'Aucun ticket enregistré.'}
                     </td>
                   </tr>
@@ -271,10 +312,11 @@ export function TicketsTable() {
                       {ticket.createdAt ? new Date(ticket.createdAt).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}
                     </td>
                     <td>
-                      <div className="fw-medium">{ticket.title}</div>
+                      <div className="fw-medium">{ticket.title || ticket.requested_name}</div>
                       {ticket.proposed_category_name && <div className="text-secondary" style={{ fontSize: 12 }}>Catégorie : {ticket.proposed_category_name}</div>}
                     </td>
                     <td className="text-secondary" style={{ fontSize: 12 }}>{truncate(ticket.description) || '—'}</td>
+                    <td><TypeBadge type={ticket.type} /></td>
                     <td><ScopeBadge scope={ticket.scope} /></td>
                     <td><StatusBadge status={ticket.status} /></td>
                     {isAdmin && <td><TicketActions ticket={ticket} onStatusChange={handleStatusChange} onOpenApprove={openApprove} /></td>}
@@ -297,11 +339,12 @@ export function TicketsTable() {
             <div key={ticket._id} className="card">
               <div className="card-body">
                 <div className="d-flex justify-content-between align-items-start mb-2">
-                  <div className="fw-medium">{ticket.title}</div>
+                  <div className="fw-medium">{ticket.title || ticket.requested_name}</div>
                   <StatusBadge status={ticket.status} />
                 </div>
                 {isAdmin && <div className="text-secondary mb-1" style={{ fontSize: 12 }}>{userName(ticket.user)}</div>}
                 <div className="d-flex flex-wrap gap-2 mb-2">
+                  <TypeBadge type={ticket.type} />
                   <ScopeBadge scope={ticket.scope} />
                   <span className="text-secondary" style={{ fontSize: 12 }}>
                     {ticket.createdAt && new Date(ticket.createdAt).toLocaleDateString('fr-FR')}
@@ -314,6 +357,14 @@ export function TicketsTable() {
             </div>
           ))}
         </div>
+      )}
+
+      {isAdmin && !loading && (
+        <Pagination
+          currentPage={pagination.currentPage}
+          totalPages={pagination.pages}
+          onPageChange={handlePageChange}
+        />
       )}
 
       {/* ── Modal créer ticket (manager uniquement) ── */}
@@ -349,10 +400,14 @@ export function TicketsTable() {
                 placeholder="ex: Méditation" required />
             </div>
             <div className="col-12">
-              <label className="form-label">Description</label>
+              <label className="form-label">
+                Description <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <textarea className="form-control" rows={2} value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                placeholder="Décrivez votre besoin…" />
+                placeholder="Décrivez votre besoin…"
+                required
+              />
             </div>
             <div className="col-md-6">
               <label className="form-label">Nom de catégorie proposé</label>
@@ -371,44 +426,39 @@ export function TicketsTable() {
           </div>
         </form>
       </Modal>
-      {/* ── Modal approbation — saisir le nom de catégorie ── */}
+
+      {/* ── Modal approbation ── */}
       <Modal
         open={!!approveModal}
         title="Approuver le ticket"
-        subtitle="Confirmez le nom de la catégorie qui sera créée pour l'utilisateur."
-        onClose={() => { setApproveModal(null); setCategoryName(''); }}
+        subtitle="Ajoutez une note d'administration avant de valider."
+        onClose={() => { setApproveModal(null); setAdminNote(''); }}
         footer={
           <div className="d-flex justify-content-between w-100">
             <button className="btn btn-secondary" type="button"
-              onClick={() => { setApproveModal(null); setCategoryName(''); }}
+              onClick={() => { setApproveModal(null); setAdminNote(''); }}
               disabled={approveLoading}>
               Annuler
             </button>
             <button className="btn btn-success" type="submit"
-              form="form-approve-ticket" disabled={approveLoading || !categoryName.trim()}>
+              form="form-approve-ticket" disabled={approveLoading}>
               {approveLoading
                 ? <><i className="fa fa-spinner fa-spin me-1" />Approbation…</>
-                : <><i className="fa fa-check me-1" />Confirmer et créer la catégorie</>}
+                : <><i className="fa fa-check me-1" />Confirmer</>}
             </button>
           </div>
         }
       >
         <form id="form-approve-ticket" onSubmit={handleApprove}>
           <div className="mb-3">
-            <label className="form-label fw-semibold">
-              Nom de la catégorie <span className="text-danger">*</span>
-            </label>
+            <label className="form-label fw-semibold">Note admin</label>
             <input
               className="form-control"
-              value={categoryName}
-              onChange={e => setCategoryName(e.target.value)}
-              placeholder="ex: Méditation, Sport du matin…"
-              required
+              value={adminNote}
+              onChange={e => setAdminNote(e.target.value)}
+              placeholder="Réponse ou commentaire pour l'utilisateur…"
               autoFocus
             />
-            <div className="form-text">
-              Ce nom sera ajouté aux catégories disponibles de l&apos;utilisateur.
-            </div>
           </div>
         </form>
       </Modal>

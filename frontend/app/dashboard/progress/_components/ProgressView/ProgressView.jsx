@@ -5,17 +5,22 @@ import { getToken } from '@/lib/auth';
 import { SummaryCards } from './SummaryCards';
 import { WeeklyTable } from './WeeklyTable';
 import { HabitsProgressTable } from './HabitsProgressTable';
+import DateFilter from '@/components/DateFilter';
 
 export const ProgressView = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (range = null) => {
     setLoading(true);
     setError(null);
     try {
-      const payload = await apiFetch('/progress/my', {
+      const params = new URLSearchParams();
+      if (range?.dateFrom) params.set('dateFrom', range.dateFrom);
+      if (range?.dateTo)   params.set('dateTo', range.dateTo);
+      const query = params.toString() ? `?${params}` : '';
+      const payload = await apiFetch(`/progress/my${query}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       setData(payload);
@@ -44,6 +49,8 @@ export const ProgressView = () => {
       </div>
 
       {error && <div className="alert alert-danger">{error}</div>}
+
+      <DateFilter onChange={(range) => refresh(range)} />
 
       <SummaryCards summary={summary} />
       <WeeklyTable weekly={weekly} />

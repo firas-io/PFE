@@ -3,9 +3,11 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { IconEdit, IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react';
 
 import { apiFetch } from '@/lib/api';
+import { invalidateCategoriesCache } from '@/hooks/useCategories';
 import { getToken } from '@/lib/auth';
 import { Modal }    from '@/components/Modal';
 import { showToast } from '@/lib/adminToast';
+import Pagination from '@/components/Pagination';
 
 const LAYOUT_OPTIONS = [
   { value: 'default',      label: 'Défaut' },
@@ -54,6 +56,8 @@ export function CategoriesManager() {
   const [modalData,   setModalData]   = useState(null);
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [editForm,    setEditForm]    = useState(EMPTY_FORM);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
   useEffect(() => { setToken(getToken()); }, []);
 
@@ -92,10 +96,17 @@ export function CategoriesManager() {
     try {
       const created = await apiFetch('/admin/categories', {
         method: 'POST',
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          label: form.label.trim(),
+          icon: (form.icon || '').trim() || 'Circle',
+          color: (form.color || '').trim() || '#6b7280',
+        }),
       });
       setCategories(prev => [...prev, created]);
       setForm(EMPTY_FORM);
+      setActiveModal(null);
+      invalidateCategoriesCache();
       showToast('Catégorie créée avec succès.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la création.', 'danger');
@@ -108,15 +119,25 @@ export function CategoriesManager() {
   const handleEdit = async (e) => {
     e.preventDefault();
     if (!modalData) return;
+    if (!editForm.label.trim()) {
+      showToast('Le label est requis.', 'danger');
+      return;
+    }
     setIsLoading(true);
     try {
       const updated = await apiFetch(`/admin/categories/${modalData._id}`, {
         method: 'PATCH',
-        body: JSON.stringify(editForm),
+        body: JSON.stringify({
+          ...editForm,
+          label: editForm.label.trim(),
+          icon: (editForm.icon || '').trim() || 'Circle',
+          color: (editForm.color || '').trim() || '#6b7280',
+        }),
       });
       setCategories(prev => prev.map(c => c._id === modalData._id ? updated : c));
       setActiveModal(null);
       setModalData(null);
+      invalidateCategoriesCache();
       showToast('Catégorie modifiée avec succès.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la modification.', 'danger');
@@ -131,6 +152,7 @@ export function CategoriesManager() {
     try {
       await apiFetch(`/admin/categories/${id}`, { method: 'DELETE' });
       setCategories(prev => prev.filter(c => c._id !== id));
+      invalidateCategoriesCache();
       showToast('Catégorie supprimée.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la suppression.', 'danger');
@@ -145,6 +167,7 @@ export function CategoriesManager() {
         body: JSON.stringify({ is_active: !cat.is_active }),
       });
       setCategories(prev => prev.map(c => c._id === cat._id ? updated : c));
+      invalidateCategoriesCache();
       showToast(`Catégorie ${updated.is_active ? 'activée' : 'désactivée'}.`, 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur.', 'danger');
@@ -161,6 +184,19 @@ export function CategoriesManager() {
     );
   }
 
+  const openCreateModal = () => {
+    setModalData(null);
+    setForm(EMPTY_FORM);
+    setActiveModal('create');
+  };
+
+  const closeCreateModal = () => {
+    if (!isLoading) {
+      setActiveModal(null);
+      setForm(EMPTY_FORM);
+    }
+  };
+
   return (
     <div className="adm-page">
       <div className="adm-header">
@@ -168,105 +204,17 @@ export function CategoriesManager() {
           <h1 className="adm-title">Catégories</h1>
           <p className="adm-subtitle">{categories.length} catégorie{categories.length !== 1 ? 's' : ''} au total</p>
         </div>
+        <div className="adm-header-actions">
+          <button className="btn btn-primary" type="button" onClick={openCreateModal} disabled={loading}>
+            <IconPlus size={16} className="me-2" />
+            Ajouter une catégorie
+          </button>
+        </div>
       </div>
 
       {error && <div className="alert alert-danger mb-3">{error}</div>}
 
-      {/* ── Layout 2 colonnes ── */}
-      <div className="row g-3">
-
-        {/* ── Formulaire ajout (col droite sur desktop) ── */}
-        <div className="col-12 col-md-4 order-1 order-md-2">
-          <div className="card">
-            <div className="card-header">
-              <h3 className="card-title">
-                <IconPlus size={16} className="me-1" />
-                Ajouter une catégorie
-              </h3>
-            </div>
-            <div className="card-body">
-              <form id="form-add-category" onSubmit={handleCreate}>
-                <div className="mb-3">
-                  <label className="form-label">Label <span className="text-danger">*</span></label>
-                  <input
-                    className="form-control"
-                    placeholder="ex: Méditation"
-                    value={form.label}
-                    onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-                    required
-                  />
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Icône <span className="text-secondary small">(nom Lucide)</span></label>
-                  <input
-                    className="form-control"
-                    placeholder="ex: Dumbbell, Heart, BookOpen"
-                    value={form.icon}
-                    onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
-                  />
-                  <div className="form-text">
-                    Voir les icônes sur{' '}
-                    <span className="text-primary">lucide.dev</span>
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Couleur</label>
-                  <div className="d-flex align-items-center gap-2">
-                    <input
-                      type="color"
-                      className="form-control form-control-color"
-                      value={form.color}
-                      onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                      style={{ width: 48, height: 36, padding: 2 }}
-                    />
-                    <input
-                      className="form-control form-control-sm"
-                      value={form.color}
-                      onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
-                      placeholder="#6b7280"
-                    />
-                  </div>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Layout</label>
-                  <select
-                    className="form-select"
-                    value={form.layout}
-                    onChange={e => setForm(f => ({ ...f, layout: e.target.value }))}
-                  >
-                    {LAYOUT_OPTIONS.map(o => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="mb-3">
-                  <label className="form-label">Description</label>
-                  <textarea
-                    className="form-control"
-                    rows={2}
-                    value={form.description}
-                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                    placeholder="Décrivez brièvement cette catégorie…"
-                  />
-                </div>
-
-                <button type="submit" className="btn btn-primary w-100" disabled={isLoading}>
-                  {isLoading
-                    ? <span className="spinner-border spinner-border-sm me-1" role="status" />
-                    : <IconPlus size={16} className="me-1" />}
-                  Ajouter
-                </button>
-              </form>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Table (col gauche sur desktop) ── */}
-        <div className="col-12 col-md-8 order-2 order-md-1">
+      <div>
 
           {loading && (
             <div className="text-center py-5">
@@ -294,7 +242,7 @@ export function CategoriesManager() {
                       <tr>
                         <td colSpan={5} className="text-center text-secondary py-4">Aucune catégorie enregistrée.</td>
                       </tr>
-                    ) : categories.map(cat => (
+                    ) : categories.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(cat => (
                       <tr key={cat._id}>
                         <td>
                           <div className="d-flex align-items-center gap-2">
@@ -328,11 +276,9 @@ export function CategoriesManager() {
                             <button className="adm-btn-icon" type="button" title="Modifier" onClick={() => { setModalData(cat); setActiveModal('edit'); }}>
                               <IconEdit size={15} />
                             </button>
-                            {!cat.is_default && (
-                              <button className="adm-btn-icon adm-btn-icon--danger" type="button" title="Supprimer" onClick={() => handleDelete(cat._id)}>
-                                <IconTrash size={15} />
-                              </button>
-                            )}
+                            <button className="adm-btn-icon adm-btn-icon--danger" type="button" title="Supprimer" onClick={() => handleDelete(cat._id)}>
+                              <IconTrash size={15} />
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -350,7 +296,7 @@ export function CategoriesManager() {
                   <div className="adm-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></div>
                   <p>Aucune catégorie enregistrée.</p>
                 </div>
-              ) : categories.map(cat => (
+              ) : categories.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(cat => (
                 <div key={cat._id} className="card">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-start mb-2">
@@ -380,25 +326,137 @@ export function CategoriesManager() {
                       <button className="adm-btn-icon" type="button" onClick={() => { setModalData(cat); setActiveModal('edit'); }}>
                         <IconEdit size={15} />
                       </button>
-                      {!cat.is_default && (
-                        <button className="adm-btn-icon adm-btn-icon--danger" type="button" onClick={() => handleDelete(cat._id)}>
-                          <IconTrash size={15} />
-                        </button>
-                      )}
+                      <button className="adm-btn-icon adm-btn-icon--danger" type="button" onClick={() => handleDelete(cat._id)}>
+                        <IconTrash size={15} />
+                      </button>
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           )}
-        </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(categories.length / PAGE_SIZE)}
+            onPageChange={setCurrentPage}
+          />
       </div>
+
+      {/* ── Modal création ── */}
+      <Modal
+        open={activeModal === 'create'}
+        title="Ajouter une catégorie"
+        onClose={closeCreateModal}
+        size="lg"
+        footer={
+          <div className="d-flex justify-content-between w-100">
+            <button
+              className="btn btn-secondary"
+              type="button"
+              onClick={closeCreateModal}
+              disabled={isLoading}
+            >
+              Annuler
+            </button>
+            <button className="btn btn-primary" type="submit" form="form-add-category" disabled={isLoading}>
+              {isLoading
+                ? <span className="spinner-border spinner-border-sm me-1" role="status" />
+                : <IconPlus size={16} className="me-1" />}
+              Ajouter
+            </button>
+          </div>
+        }
+      >
+        <form id="form-add-category" onSubmit={handleCreate}>
+          <div className="mb-3">
+            <label className="form-label">
+              Label <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input
+              className="form-control"
+              placeholder="ex: Méditation"
+              value={form.label}
+              onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">
+              Icône <span className="text-secondary small">(nom Lucide)</span>{' '}
+              <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input
+              className="form-control"
+              placeholder="ex: Dumbbell, Heart, BookOpen"
+              value={form.icon}
+              onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
+              required
+            />
+            <div className="form-text">
+              Voir les icônes sur{' '}
+              <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" className="text-primary">
+                lucide.dev
+              </a>
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">
+              Couleur <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <div className="d-flex align-items-center gap-2">
+              <input
+                type="color"
+                className="form-control form-control-color"
+                value={form.color || '#6b7280'}
+                onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
+                style={{ width: 48, height: 36, padding: 2 }}
+                title="Couleur"
+              />
+              <input
+                className="form-control form-control-sm"
+                value={form.color}
+                onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
+                placeholder="#6b7280"
+              />
+            </div>
+          </div>
+
+          <div className="mb-3">
+            <label className="form-label">
+              Layout <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <select
+              className="form-select"
+              value={form.layout}
+              onChange={e => setForm(f => ({ ...f, layout: e.target.value }))}
+              required
+            >
+              {LAYOUT_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mb-0">
+            <label className="form-label">Description</label>
+            <textarea
+              className="form-control"
+              rows={2}
+              value={form.description}
+              onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="Décrivez brièvement cette catégorie…"
+            />
+          </div>
+        </form>
+      </Modal>
 
       {/* ── Modal modification ── */}
       <Modal
         open={activeModal === 'edit'}
         title="Modifier la catégorie"
-        onClose={() => { setActiveModal(null); setModalData(null); }}
+        onClose={() => { if (!isLoading) { setActiveModal(null); setModalData(null); } }}
         size="lg"
         footer={
           <div className="d-flex justify-content-between w-100">
@@ -422,7 +480,9 @@ export function CategoriesManager() {
         <form id="form-edit-category" onSubmit={handleEdit}>
           <div className="row g-3">
             <div className="col-12">
-              <label className="form-label">Label <span className="text-danger">*</span></label>
+              <label className="form-label">
+                Label <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input
                 className="form-control"
                 value={editForm.label}
@@ -432,24 +492,36 @@ export function CategoriesManager() {
             </div>
 
             <div className="col-md-6">
-              <label className="form-label">Icône <span className="text-secondary small">(nom Lucide)</span></label>
+              <label className="form-label">
+                Icône <span className="text-secondary small">(nom Lucide)</span>{' '}
+                <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <input
                 className="form-control"
                 value={editForm.icon}
                 onChange={e => setEditForm(f => ({ ...f, icon: e.target.value }))}
                 placeholder="ex: Dumbbell"
+                required
               />
+              <div className="form-text">
+                <a href="https://lucide.dev/icons" target="_blank" rel="noopener noreferrer" className="text-primary">
+                  Voir les icônes sur lucide.dev
+                </a>
+              </div>
             </div>
 
             <div className="col-md-6">
-              <label className="form-label">Couleur</label>
+              <label className="form-label">
+                Couleur <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <div className="d-flex align-items-center gap-2">
                 <input
                   type="color"
                   className="form-control form-control-color"
-                  value={editForm.color}
+                  value={editForm.color || '#6b7280'}
                   onChange={e => setEditForm(f => ({ ...f, color: e.target.value }))}
                   style={{ width: 48, height: 36, padding: 2 }}
+                  title="Couleur"
                 />
                 <input
                   className="form-control form-control-sm"
@@ -460,11 +532,14 @@ export function CategoriesManager() {
             </div>
 
             <div className="col-md-6">
-              <label className="form-label">Layout</label>
+              <label className="form-label">
+                Layout <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <select
                 className="form-select"
                 value={editForm.layout}
                 onChange={e => setEditForm(f => ({ ...f, layout: e.target.value }))}
+                required
               >
                 {LAYOUT_OPTIONS.map(o => (
                   <option key={o.value} value={o.value}>{o.label}</option>
@@ -473,11 +548,14 @@ export function CategoriesManager() {
             </div>
 
             <div className="col-md-6">
-              <label className="form-label">Statut</label>
+              <label className="form-label">
+                Statut <span className="text-danger" aria-hidden="true">*</span>
+              </label>
               <select
                 className="form-select"
                 value={editForm.is_active ? 'active' : 'inactive'}
                 onChange={e => setEditForm(f => ({ ...f, is_active: e.target.value === 'active' }))}
+                required
               >
                 <option value="active">Actif</option>
                 <option value="inactive">Inactif</option>

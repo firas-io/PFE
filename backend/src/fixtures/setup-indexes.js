@@ -1,4 +1,5 @@
 import { RefreshTokens } from "@/modules/auth/models/RefreshToken.model.js";
+import { UserHabitSettings } from "@/modules/habits/models/UserHabitSettings.model.js";
 import logger from "@/utils/logger.util.js";
 
 export async function setupIndexes() {
@@ -12,9 +13,12 @@ export async function setupIndexes() {
     // MongoDB TTL — auto-delete expired tokens (runs every 60 s by default)
     await RefreshTokens.createIndex({ expires_at: 1 }, { expireAfterSeconds: 0, name: "idx_refresh_ttl" });
 
-    logger.info("MongoDB indexes ensured for refresh_tokens");
+    // Unique constraint: one settings doc per user+habit
+    await UserHabitSettings.createIndex({ user_id: 1, habit_id: 1 }, { unique: true, name: "idx_user_habit_settings_unique" });
+
+    logger.info("MongoDB indexes ensured for refresh_tokens, user_habit_settings");
   } catch (err) {
-    logger.error({ err }, "Failed to create refresh_tokens indexes");
+    logger.error({ err }, "Failed to create indexes");
     // Non-fatal: indexes are for performance/TTL — server can still start
   }
 }

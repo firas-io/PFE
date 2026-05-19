@@ -6,35 +6,46 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   IconCalendarOff,
+  IconCalendarStats,
   IconChartBar,
+  IconCheck,
+  IconHome,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconListDetails,
   IconLogout,
+  IconMessageCircle,
   IconMoon,
   IconNotes,
   IconProgress,
+  IconReportAnalytics,
+  IconShieldCheck,
   IconSun,
   IconTag,
   IconTicket,
+  IconUser,
   IconUsers,
   IconUsersGroup,
 } from "@tabler/icons-react";
-import { clearAuth, getUser } from "@/lib/auth";
+import { clearAuth, getUser, setUser as storeUser } from "@/lib/auth";
+import { apiFetch } from "@/lib/api";
+import {
+  canAccessAdminShell,
+  canManageManagersCrud,
+  canViewUsers,
+  canViewHabits,
+  canManageHabits,
+  canManageCategoryTickets,
+  canViewStats,
+  canViewRoles,
+  canViewCategories,
+  canManageOffDays,
+} from "@/src/utils/permissions";
 
-const ADMIN_MOBILE_NAV = [
-  { href: "/admin",               label: "Dashboard",  icon: IconChartBar    },
-  { href: "/admin/managers-users",label: "Managers",   icon: IconUsersGroup  },
-  { href: "/admin/habits",        label: "Habitudes",  icon: IconProgress    },
-  { href: "/admin/logs",          label: "Logs",       icon: IconListDetails },
-  { href: "/admin/tickets",       label: "Tickets",    icon: IconTicket      },
-];
-
-const MANAGER_MOBILE_NAV = [
-  { href: "/admin",           label: "Dashboard", icon: IconChartBar  },
-  { href: "/admin/my-users",  label: "Équipe",    icon: IconUsers     },
-  { href: "/admin/notes",     label: "Notes",     icon: IconNotes     },
-  { href: "/admin/off-days",  label: "Jours off", icon: IconCalendarOff },
+const ALL_ADMIN_MOBILE_NAV = [
+  { href: "/admin",               label: "Dashboard",  icon: IconChartBar,   always: true  },
+  { href: "/admin/managers-users",label: "Managers",   icon: IconUsersGroup, permFn: canManageManagersCrud },
+  { href: "/admin/habits",        label: "Habitudes",  icon: IconProgress,   permFn: canViewHabits         },
+  { href: "/admin/tickets",       label: "Tickets",    icon: IconTicket,     permFn: canManageCategoryTickets },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -52,15 +63,29 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [profileReady, setProfileReady] = useState(false);
 
   useEffect(() => {
     const stored = getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; role?: string; permissions?: string[] }>();
     setUser(stored);
     setDarkMode(window.localStorage.getItem("habitflow_admin_dark_mode") === "true");
     setIsMobile(window.innerWidth < 769);
-    // Start with sidebar closed on mobile
     if (window.innerWidth < 769) setSidebarOpen(false);
     setMounted(true);
+
+    // Sync live permissions from DB — the backend resolves them fresh on every /profile call
+    // (with a 60s in-memory cache). This ensures sidebar links reflect admin-configured
+    // permissions without requiring a re-login.
+    apiFetch<{ permissions?: string[] }>("/profile")
+      .then((profile) => {
+        if (!profile?.permissions) return;
+        const updated = { ...stored, permissions: profile.permissions };
+        setUser(updated);
+        storeUser(updated);
+      })
+      .catch(() => { /* silent — fall back to cached localStorage permissions */ })
+      .finally(() => setProfileReady(true));
   }, []);
 
   useEffect(() => {
@@ -78,27 +103,37 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   const role = (user?.role ?? "").toString().toLowerCase();
   const isAdmin = role === "admin";
   const isManager = role === "manager";
+
+  const managerMobileNav = [
+    { href: "/dashboard/home",     label: "Mon bord",  icon: IconHome        },
+    { href: "/admin/my-users",     label: "Équipe",    icon: IconUsers       },
+    { href: "/dashboard/habits",   label: "Habitudes", icon: IconCheck       },
+    { href: "/admin/off-days",     label: "Jours off", icon: IconCalendarOff },
+  ];
   const mobileSidebarStyle = isMobile
     ? {
         position: "fixed" as const,
-        top: 0,
+        top: 60,
         left: 0,
-        bottom: 0,
-        right: "auto" as const,
-        width: "min(86vw, var(--hf-sidebar-w))",
-        height: "100dvh",
-        transform: sidebarOpen ? "translate3d(0, 0, 0)" : "translate3d(-100%, 0, 0)",
+        right: 0,
+        bottom: "auto" as const,
+        width: "100%",
+        height: "auto",
+        maxHeight: "calc(100dvh - 60px)",
+        overflowY: "auto" as const,
+        transform: sidebarOpen ? "translateY(0)" : "translateY(calc(-100% - 70px))",
         transition: "transform 0.28s var(--hf-ease)",
         zIndex: 1000,
+        borderRadius: "0 0 14px 14px",
       }
     : undefined;
 
   useEffect(() => {
-    if (!mounted) return;
-    if (!user || (!isAdmin && !isManager)) {
+    if (!mounted || !profileReady) return;
+    if (!user || !canAccessAdminShell(user)) {
       router.replace("/login");
     }
-  }, [mounted, user, router, isAdmin, isManager]);
+  }, [mounted, profileReady, user, router]);
 
   function logout() {
     clearAuth();
@@ -117,7 +152,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return pathname.startsWith(href);
   }
 
-  const mobileNav = isManager ? MANAGER_MOBILE_NAV : ADMIN_MOBILE_NAV;
+  const adminMobileNav = ALL_ADMIN_MOBILE_NAV.filter(
+    (item) => item.always || (item.permFn && item.permFn(user))
+  );
+  const mobileNav = isManager ? managerMobileNav : adminMobileNav;
 
   return (
     <div className={`admin-shell${sidebarOpen ? "" : " admin-shell--sidebar-collapsed"}${darkMode ? " admin-shell--dark" : ""}`}>
@@ -153,35 +191,82 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
           {isAdmin && (
             <>
-              <Link href="/admin/managers-users" className={`admin-nav-link ${pathname.startsWith("/admin/managers-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconUsersGroup size={18} stroke={1.75} aria-hidden />
-                Managers &amp; Utilisateurs
-              </Link>
-              <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconProgress size={18} stroke={1.75} aria-hidden />
-                Habitudes
-              </Link>
-              <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconTag size={18} stroke={1.75} aria-hidden />
-                Catégories
-              </Link>
-              <Link href="/admin/logs" className={`admin-nav-link ${pathname.startsWith("/admin/logs") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconListDetails size={18} stroke={1.75} aria-hidden />
-                Logs
-              </Link>
-              <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconTicket size={18} stroke={1.75} aria-hidden />
-                Tickets
-              </Link>
-              <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconCalendarOff size={18} stroke={1.75} aria-hidden />
-                Jours off
-              </Link>
+              {canManageManagersCrud(user) && (
+                <Link href="/admin/managers-users" className={`admin-nav-link ${pathname.startsWith("/admin/managers-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconUsersGroup size={18} stroke={1.75} aria-hidden />
+                  Managers &amp; Utilisateurs
+                </Link>
+              )}
+              {(canViewHabits(user) || canManageHabits(user)) && (
+                <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconProgress size={18} stroke={1.75} aria-hidden />
+                  Habitudes
+                </Link>
+              )}
+              {canViewCategories(user) && (
+                <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconTag size={18} stroke={1.75} aria-hidden />
+                  Catégories
+                </Link>
+              )}
+              {canManageCategoryTickets(user) && (
+                <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconTicket size={18} stroke={1.75} aria-hidden />
+                  Tickets
+                </Link>
+              )}
+              {canManageOffDays(user) && (
+                <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconCalendarOff size={18} stroke={1.75} aria-hidden />
+                  Jours off
+                </Link>
+              )}
+              {canViewStats(user) && (
+                <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
+                  Statistiques
+                </Link>
+              )}
+              {canViewRoles(user) && (
+                <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconShieldCheck size={18} stroke={1.75} aria-hidden />
+                  Permissions rôles
+                </Link>
+              )}
             </>
           )}
 
           {isManager && (
             <>
+              {/* ── Section Mon espace (toujours visible) ── */}
+              <p className="admin-nav-section" style={{ marginTop: 12 }}>Mon espace</p>
+              <Link href="/dashboard/home" className={`admin-nav-link ${pathname === "/dashboard/home" ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconHome size={18} stroke={1.75} aria-hidden />
+                Tableau de bord
+              </Link>
+              <Link href="/dashboard/habits" className={`admin-nav-link ${pathname.startsWith("/dashboard/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconCheck size={18} stroke={1.75} aria-hidden />
+                Mes habitudes
+              </Link>
+              <Link href="/dashboard/stats" className={`admin-nav-link ${pathname.startsWith("/dashboard/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
+                Mes statistiques
+              </Link>
+              <Link href="/dashboard/calendar" className={`admin-nav-link ${pathname.startsWith("/dashboard/calendar") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconCalendarStats size={18} stroke={1.75} aria-hidden />
+                Mon calendrier
+              </Link>
+              <Link href="/dashboard/progress" className={`admin-nav-link ${pathname.startsWith("/dashboard/progress") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconUser size={18} stroke={1.75} aria-hidden />
+                Ma progression
+              </Link>
+              <Link href="/dashboard/tickets" className={`admin-nav-link ${pathname.startsWith("/dashboard/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconMessageCircle size={18} stroke={1.75} aria-hidden />
+                Mes tickets
+              </Link>
+
+              {/* ── Section Mon équipe (toujours visible) ── */}
+              <p className="admin-nav-section" style={{ marginTop: 12 }}>Mon équipe</p>
               <Link href="/admin/my-users" className={`admin-nav-link ${pathname.startsWith("/admin/my-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
                 <IconUsers size={18} stroke={1.75} aria-hidden />
                 Mon équipe
@@ -194,21 +279,112 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <IconCalendarOff size={18} stroke={1.75} aria-hidden />
                 Jours off
               </Link>
+
+              {/* ── Section Administration (par permission) ── */}
+              {(canManageManagersCrud(user) || canViewUsers(user) || canViewHabits(user) || canViewCategories(user) || canManageCategoryTickets(user) || canViewStats(user) || canViewRoles(user)) && (
+                <p className="admin-nav-section" style={{ marginTop: 12 }}>Administration</p>
+              )}
+              {canManageManagersCrud(user) && (
+                <Link href="/admin/managers" className={`admin-nav-link ${pathname.startsWith("/admin/managers") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconUsersGroup size={18} stroke={1.75} aria-hidden />
+                  Gestion des managers
+                </Link>
+              )}
+              {canViewUsers(user) && (
+                <Link href="/admin/users" className={`admin-nav-link ${pathname.startsWith("/admin/users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconUsers size={18} stroke={1.75} aria-hidden />
+                  Utilisateurs
+                </Link>
+              )}
+              {(canViewHabits(user) || canManageHabits(user)) && (
+                <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconProgress size={18} stroke={1.75} aria-hidden />
+                  Habitudes globales
+                </Link>
+              )}
+              {canViewCategories(user) && (
+                <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconTag size={18} stroke={1.75} aria-hidden />
+                  Catégories
+                </Link>
+              )}
+              {canManageCategoryTickets(user) && (
+                <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconTicket size={18} stroke={1.75} aria-hidden />
+                  Tickets
+                </Link>
+              )}
+              {canViewStats(user) && (
+                <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconChartBar size={18} stroke={1.75} aria-hidden />
+                  Statistiques
+                </Link>
+              )}
+              {canViewRoles(user) && (
+                <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconShieldCheck size={18} stroke={1.75} aria-hidden />
+                  Permissions rôles
+                </Link>
+              )}
+            </>
+          )}
+
+          {!isAdmin && !isManager && (
+            <>
+              <p className="admin-nav-section">Administration</p>
+              {canManageOffDays(user) && (
+                <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconCalendarOff size={18} stroke={1.75} aria-hidden />
+                  Jours off
+                </Link>
+              )}
+              {(canViewHabits(user) || canManageHabits(user)) && (
+                <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconProgress size={18} stroke={1.75} aria-hidden />
+                  Habitudes
+                </Link>
+              )}
+              {canViewCategories(user) && (
+                <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconTag size={18} stroke={1.75} aria-hidden />
+                  Catégories
+                </Link>
+              )}
+              {canManageCategoryTickets(user) && (
+                <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconTicket size={18} stroke={1.75} aria-hidden />
+                  Tickets
+                </Link>
+              )}
+              {canViewStats(user) && (
+                <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
+                  Statistiques
+                </Link>
+              )}
+              {canManageManagersCrud(user) && (
+                <Link href="/admin/managers-users" className={`admin-nav-link ${pathname.startsWith("/admin/managers-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconUsersGroup size={18} stroke={1.75} aria-hidden />
+                  Managers &amp; Utilisateurs
+                </Link>
+              )}
+              {canViewUsers(user) && !canManageManagersCrud(user) && (
+                <Link href="/admin/users" className={`admin-nav-link ${pathname.startsWith("/admin/users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconUsers size={18} stroke={1.75} aria-hidden />
+                  Utilisateurs
+                </Link>
+              )}
+              {canViewRoles(user) && (
+                <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                  <IconShieldCheck size={18} stroke={1.75} aria-hidden />
+                  Permissions rôles
+                </Link>
+              )}
             </>
           )}
         </nav>
 
-        <div className="admin-sidebar-footer">
-          <button
-            type="button"
-            className="admin-nav-link w-100 text-start border-0 bg-transparent"
-            onClick={logout}
-            style={{ color: "var(--hf-danger, #ef4444)" }}
-          >
-            <IconLogout size={18} stroke={1.75} aria-hidden />
-            Déconnexion
-          </button>
-        </div>
+        <div className="admin-sidebar-footer" />
       </aside>
 
       {/* Overlay — closes sidebar on mobile when tapping outside */}
@@ -219,7 +395,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           style={{
             display: "none",
             position: "fixed",
-            inset: 0,
+            top: 60,
+            left: 0,
+            right: 0,
+            bottom: 0,
             zIndex: 999,
             background: "rgba(0,0,0,0.3)",
           }}
@@ -241,10 +420,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 ? <IconLayoutSidebarLeftCollapse size={20} stroke={1.75} />
                 : <IconLayoutSidebarLeftExpand size={20} stroke={1.75} />}
             </button>
-            <div className="topbar-search">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-              <input type="text" placeholder="Rechercher…" readOnly style={{ border: "none", outline: "none", background: "transparent", fontSize: 13, color: "var(--hf-text)", fontFamily: "inherit", width: "100%" }} />
-            </div>
           </div>
           <div className="admin-topbar-user">
             <button
@@ -257,11 +432,67 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               {darkMode ? <IconSun size={15} stroke={1.9} /> : <IconMoon size={15} stroke={1.9} />}
               <span suppressHydrationWarning>{darkMode ? "Clair" : "Sombre"}</span>
             </button>
-            <button type="button" className="topbar-icon-btn" title="Notifications">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
-            </button>
-            <div className="admin-avatar" suppressHydrationWarning>
-              {(((user?.firstName ?? user?.prenom)?.[0] ?? "") + ((user?.lastName ?? user?.nom)?.[0] ?? "")).toUpperCase() || "?"}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                className="admin-avatar"
+                suppressHydrationWarning
+                onClick={() => setShowUserMenu((v) => !v)}
+                aria-label="Menu utilisateur"
+                style={{ cursor: "pointer", border: "none", padding: 0 }}
+              >
+                {(((user?.firstName ?? user?.prenom)?.[0] ?? "") + ((user?.lastName ?? user?.nom)?.[0] ?? "")).toUpperCase() || "?"}
+              </button>
+              {showUserMenu && (
+                <>
+                  <div
+                    onClick={() => setShowUserMenu(false)}
+                    style={{ position: "fixed", inset: 0, zIndex: 1099 }}
+                  />
+                  <div style={{
+                    position: "absolute",
+                    top: "calc(100% + 8px)",
+                    right: 0,
+                    background: "#fff",
+                    border: "1px solid #E8E7F5",
+                    borderRadius: 12,
+                    boxShadow: "0 8px 24px rgba(67,56,202,0.10)",
+                    minWidth: 180,
+                    zIndex: 1100,
+                    overflow: "hidden",
+                  }}>
+                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #F0EFF9" }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: "var(--hf-text)" }} suppressHydrationWarning>
+                        {[user?.firstName ?? user?.prenom, user?.lastName ?? user?.nom].filter(Boolean).join(" ") || "Utilisateur"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#94A3B8", marginTop: 2 }} suppressHydrationWarning>
+                        {user?.role || "Responsable"}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowUserMenu(false); logout(); }}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        width: "100%",
+                        padding: "10px 16px",
+                        border: "none",
+                        background: "none",
+                        color: "#ef4444",
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        textAlign: "left",
+                      }}
+                    >
+                      <IconLogout size={15} stroke={1.75} />
+                      Déconnexion
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
             <div className="hide-mobile">
               <div className="admin-user-name" suppressHydrationWarning>
@@ -297,7 +528,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         @media (max-width: 768px) {
           .sidebar-overlay { display: block !important; }
           .hide-mobile { display: none !important; }
-          .topbar-search { max-width: 160px; }
         }
       `}</style>
     </div>

@@ -18,19 +18,11 @@ export const HabitForm = ({ formId, form, onChange, disabled, allowedCategories,
     return () => window.removeEventListener('resize', handler);
   }, []);
 
-  const visibleCategories = useMemo(() => {
-    const customCats  = categories.filter(c => c.is_custom);
-    const normalCats  = categories.filter(c => !c.is_custom);
-    // No restriction → show everything
-    if (!allowedCategories || allowedCategories.length === 0) return categories;
-    // With restriction: show allowed normal cats + ALL custom cats (approved via tickets)
-    const allowed = new Set(allowedCategories);
-    if (form.categorie && !form.categorie_ticket_id) allowed.add(form.categorie);
-    return [
-      ...normalCats.filter(c => allowed.has(c.slug)),
-      ...customCats,
-    ];
-  }, [categories, allowedCategories, form.categorie, form.categorie_ticket_id]);
+  // All active categories from API (incl. admin-created). Hide template "autre" only.
+  const visibleCategories = useMemo(
+    () => categories.filter((c) => c.slug !== 'autre' || c.is_custom),
+    [categories]
+  );
 
   const set = (patch) => {
     if (Object.prototype.hasOwnProperty.call(patch, 'categorie') && patch.categorie !== form.categorie) {
@@ -63,14 +55,15 @@ export const HabitForm = ({ formId, form, onChange, disabled, allowedCategories,
           </div>
 
           <div className="mb-3">
-            <label htmlFor={`${formId}-description`} className="form-label">Description</label>
+            <label htmlFor={`${formId}-description`} className="form-label">Description *</label>
             <textarea
               id={`${formId}-description`}
               className="form-control"
               rows={3}
               value={form.description}
               onChange={(e) => set({ description: e.target.value })}
-              placeholder="Description optionnelle de votre habitude"
+              placeholder="Décrivez le pourquoi et le comment de votre habitude"
+              required
               disabled={disabled}
             />
           </div>

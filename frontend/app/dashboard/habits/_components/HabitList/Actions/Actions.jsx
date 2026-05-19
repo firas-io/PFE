@@ -1,25 +1,15 @@
 'use client';
-import React from 'react';
-import { Archive, Copy, FileText, Pause, Pencil, Play } from 'lucide-react';
+import React, { useState } from 'react';
+import { Archive, Copy, FileText, MoreHorizontal, Pause, Pencil, Play } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { WeeklyCompletionToggle } from './WeeklyCompletionToggle';
 
-const Btn = ({ onClick, disabled, title, className, children }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    disabled={disabled}
-    title={title}
-    className={cn(
-      'd-flex h-8 w-8 align-items-center justify-content-center rounded-3 border border-border text-muted transition-smooth',
-      'hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
-      'disabled:pointer-events-none disabled:opacity-40',
-      className
-    )}
-  >
-    {children}
-  </button>
-);
+const menuItem = (color) => ({
+  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+  padding: '8px 14px', border: 'none', background: 'none',
+  fontSize: 13, fontWeight: 500, color: color || 'var(--hf-text)',
+  cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+});
 
 export const Actions = ({
   habit,
@@ -33,11 +23,15 @@ export const Actions = ({
   weeklyCompletion,
   todayIndex,
 }) => {
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, left: 0 });
   const isActive = !habit.statut || habit.statut === 'active';
+
+  const close = () => setOpen(false);
 
   return (
     <div className="d-flex align-items-center gap-1">
-      {/* Weekly complete toggle */}
+      {/* Weekly complete toggle stays inline */}
       <WeeklyCompletionToggle
         weeklyCompletion={weeklyCompletion}
         todayIndex={todayIndex}
@@ -45,58 +39,102 @@ export const Actions = ({
         disabled={disabled}
       />
 
-      {/* Edit */}
-      <Btn onClick={() => onEdit(habit)} disabled={disabled} title="Modifier">
-        <Pencil className="h-3.5 w-3.5" />
-      </Btn>
-
-      {/* Clone */}
-      <Btn onClick={() => onClone(habit._id)} disabled={disabled} title="Dupliquer">
-        <Copy className="h-3.5 w-3.5" />
-      </Btn>
-
-      {/* Pause / Resume */}
-      {isActive ? (
-        <Btn
-          onClick={() => onTogglePause(habit._id, 'pause')}
+      {/* ⋯ menu trigger */}
+      <div style={{ position: 'relative', display: 'inline-block' }}>
+        <button
+          type="button"
           disabled={disabled}
-          title="Mettre en pause"
-          className="hover:border-warning/40 hover:bg-warning/10 hover:text-warning"
+          title="Actions"
+          onClick={(e) => {
+            const rect = e.currentTarget.getBoundingClientRect();
+            setMenuPos({ top: rect.bottom + 4, left: rect.right - 170 });
+            setOpen((v) => !v);
+          }}
+          className={cn(
+            'd-flex h-8 w-8 align-items-center justify-content-center rounded-3 border border-border text-muted transition-smooth',
+            'hover:border-primary/40 hover:bg-primary/5 hover:text-primary',
+            'disabled:pointer-events-none disabled:opacity-40',
+          )}
         >
-          <Pause className="h-3.5 w-3.5" />
-        </Btn>
-      ) : (
-        <Btn
-          onClick={() => onTogglePause(habit._id, 'active')}
-          disabled={disabled}
-          title="Reprendre"
-          className="hover:border-success/40 hover:bg-success/10 hover:text-success"
-        >
-          <Play className="h-3.5 w-3.5" />
-        </Btn>
-      )}
+          <MoreHorizontal className="h-3.5 w-3.5" />
+        </button>
 
-      {/* Notes */}
-      <Btn
-        onClick={() => onNotes(habit)}
-        disabled={disabled}
-        title={habit.note ? 'Modifier les notes' : 'Ajouter des notes'}
-        className={habit.note ? 'border-info/30 bg-info/5 text-info hover:bg-info/15 hover:border-info/50 hover:text-info' : ''}
-      >
-        <FileText className="h-3.5 w-3.5" />
-      </Btn>
+        {open && (
+          <>
+            <div onClick={close} style={{ position: 'fixed', inset: 0, zIndex: 1299 }} />
+            <div style={{
+              position: 'fixed', top: menuPos.top, left: menuPos.left,
+              background: '#fff', border: '1px solid #E8E7F5', borderRadius: 10,
+              boxShadow: '0 8px 24px rgba(67,56,202,0.10)', minWidth: 170,
+              zIndex: 1300, overflow: 'hidden',
+            }}>
+              <button
+                type="button" style={menuItem()}
+                onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { close(); onEdit(habit); }}
+              >
+                <Pencil size={14} style={{ color: '#6366F1' }} /> Modifier
+              </button>
 
-      {/* Archive */}
-      {habit.statut !== 'archived' && (
-        <Btn
-          onClick={() => onArchive(habit._id)}
-          disabled={disabled}
-          title="Archiver"
-          className="hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
-        >
-          <Archive className="h-3.5 w-3.5" />
-        </Btn>
-      )}
+              <button
+                type="button" style={menuItem()}
+                onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { close(); onClone(habit._id); }}
+              >
+                <Copy size={14} style={{ color: '#6366F1' }} /> Dupliquer
+              </button>
+
+              <button
+                type="button" style={menuItem()}
+                onMouseEnter={e => e.currentTarget.style.background = '#F5F3FF'}
+                onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                onClick={() => { close(); onNotes(habit); }}
+              >
+                <FileText size={14} style={{ color: habit.note ? '#06B6D4' : '#6366F1' }} />
+                {habit.note ? 'Modifier les notes' : 'Ajouter des notes'}
+              </button>
+
+              <div style={{ height: 1, background: '#F0EFF9', margin: '2px 0' }} />
+
+              {isActive ? (
+                <button
+                  type="button" style={menuItem()}
+                  onMouseEnter={e => e.currentTarget.style.background = '#FFFBEB'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  onClick={() => { close(); onTogglePause(habit._id, 'pause'); }}
+                >
+                  <Pause size={14} style={{ color: '#F59E0B' }} /> Mettre en pause
+                </button>
+              ) : (
+                <button
+                  type="button" style={menuItem()}
+                  onMouseEnter={e => e.currentTarget.style.background = '#F0FDF4'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                  onClick={() => { close(); onTogglePause(habit._id, 'active'); }}
+                >
+                  <Play size={14} style={{ color: '#10B981' }} /> Reprendre
+                </button>
+              )}
+
+              {habit.statut !== 'archived' && (
+                <>
+                  <div style={{ height: 1, background: '#F0EFF9', margin: '2px 0' }} />
+                  <button
+                    type="button" style={menuItem('#EF4444')}
+                    onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                    onClick={() => { close(); onArchive(habit._id); }}
+                  >
+                    <Archive size={14} /> Archiver
+                  </button>
+                </>
+              )}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 };

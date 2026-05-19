@@ -4,8 +4,10 @@ import { IconEdit, IconPlus, IconRefresh, IconTrash } from '@tabler/icons-react'
 
 import { apiFetch } from '@/lib/api';
 import { getToken, getUser } from '@/lib/auth';
+import { canAddOffDays } from '@/src/utils/permissions';
 import { Modal } from '@/components/Modal';
 import { showToast } from '@/lib/adminToast';
+import Pagination from '@/components/Pagination';
 
 const TYPE_BADGE = {
   holiday:     <span className="adm-status adm-status--rejected">Bloquant</span>,
@@ -47,8 +49,10 @@ export function OffDays() {
   const [modalData,   setModalData]   = useState(null);
   const [form,        setForm]        = useState(EMPTY_FORM);
   const [editForm,    setEditForm]    = useState(EMPTY_FORM);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 5;
 
-  const isAdmin = (getUser()?.role ?? '').toString().toLowerCase() === 'admin';
+  const isAdmin = canAddOffDays(getUser());
 
   useEffect(() => { setToken(getToken()); }, []);
 
@@ -91,11 +95,25 @@ export function OffDays() {
       });
       setOffDays(prev => [...prev, created]);
       setForm(EMPTY_FORM);
+      setActiveModal(null);
       showToast('Jour off ajouté avec succès.', 'success');
     } catch (err) {
       showToast(err instanceof Error ? err.message : 'Erreur lors de la création.', 'danger');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    setModalData(null);
+    setForm(EMPTY_FORM);
+    setActiveModal('create');
+  };
+
+  const closeCreateModal = () => {
+    if (!isLoading) {
+      setActiveModal(null);
+      setForm(EMPTY_FORM);
     }
   };
 
@@ -154,88 +172,21 @@ export function OffDays() {
             {isAdmin ? 'Gérez les jours fériés et les jours de fermeture' : 'Consultez les jours fériés et les jours de fermeture'}
           </p>
         </div>
+        {isAdmin && (
+          <div className="adm-header-actions">
+            <button className="btn btn-primary" type="button" onClick={openCreateModal} disabled={loading}>
+              <IconPlus size={16} className="me-2" />
+              Ajouter un jour off
+            </button>
+          </div>
+        )}
       </div>
 
-      {!isAdmin && (
-        <div className="alert alert-info mb-3">
-          Les jours off sont configurés par l&apos;administrateur.
-        </div>
-      )}
 
       {/* ── Error ── */}
       {error && <div className="alert alert-danger mb-3">{error}</div>}
 
-      {/* ── Two-column layout ── */}
-      <div className="row g-3">
-
-        {/* ── Add form — visible admin uniquement ── */}
-        {isAdmin && (
-          <div className="col-12 col-md-4 order-1 order-md-2">
-            <div className="card">
-              <div className="card-header">
-                <h3 className="card-title">Ajouter un jour off</h3>
-              </div>
-              <div className="card-body">
-                <form id="form-add-offday" onSubmit={handleCreate}>
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Date <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      type="date"
-                      className="form-control"
-                      value={form.date}
-                      onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Label <span className="text-danger">*</span>
-                    </label>
-                    <input
-                      className="form-control"
-                      placeholder="ex: Fête du Travail"
-                      value={form.label}
-                      onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">
-                      Type <span className="text-danger">*</span>
-                    </label>
-                    <select
-                      className="form-select"
-                      value={form.type}
-                      onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
-                    >
-                      {TYPE_OPTIONS.map(o => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))}
-                    </select>
-                    <div className={(TYPE_HELP[form.type] ?? TYPE_HELP.other).className}>
-                      {(TYPE_HELP[form.type] ?? TYPE_HELP.other).text}
-                    </div>
-                  </div>
-                  <button
-                    type="submit"
-                    className="btn btn-primary w-100"
-                    disabled={isLoading}
-                  >
-                    {isLoading
-                      ? <span className="spinner-border spinner-border-sm me-1" role="status" />
-                      : <IconPlus size={16} className="me-1" />}
-                    Ajouter
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* ── List — pleine largeur si manager, 8 cols si admin ── */}
-        <div className={`col-12 ${isAdmin ? 'col-md-8 order-2 order-md-1' : ''}`}>
+      <div>
 
           {loading && (
             <div className="text-center py-5">
@@ -262,7 +213,7 @@ export function OffDays() {
                       <tr>
                         <td colSpan={isAdmin ? 4 : 3} className="text-center text-secondary py-4">Aucun jour off enregistré.</td>
                       </tr>
-                    ) : offDays.map(offDay => (
+                    ) : offDays.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(offDay => (
                       <tr key={offDay._id}>
                         <td className="fw-medium">{formatDate(offDay.date)}</td>
                         <td>{offDay.label}</td>
@@ -294,7 +245,7 @@ export function OffDays() {
                   <div className="adm-empty-icon"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
                   <p>Aucun jour off enregistré.</p>
                 </div>
-              ) : offDays.map(offDay => (
+              ) : offDays.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE).map(offDay => (
                 <div key={offDay._id} className="card">
                   <div className="card-body">
                     <div className="d-flex justify-content-between align-items-start mb-2">
@@ -319,14 +270,84 @@ export function OffDays() {
               ))}
             </div>
           )}
-        </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(offDays.length / PAGE_SIZE)}
+            onPageChange={setCurrentPage}
+          />
       </div>
+
+      {/* ── Modal création ── */}
+      <Modal
+        open={activeModal === 'create'}
+        title="Ajouter un jour off"
+        onClose={closeCreateModal}
+        size="lg"
+        footer={
+          <div className="d-flex justify-content-between w-100">
+            <button className="btn btn-secondary" type="button" onClick={closeCreateModal} disabled={isLoading}>
+              <i className="fa fa-times me-1" />Annuler
+            </button>
+            <button className="btn btn-primary" type="submit" form="form-add-offday" disabled={isLoading}>
+              {isLoading
+                ? <i className="fa fa-spinner fa-spin me-1" />
+                : <><IconPlus size={16} className="me-1" /></>}
+              Ajouter
+            </button>
+          </div>
+        }
+      >
+        <form id="form-add-offday" onSubmit={handleCreate}>
+          <div className="mb-3">
+            <label className="form-label">
+              Date <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input
+              type="date"
+              className="form-control"
+              value={form.date}
+              onChange={e => setForm(f => ({ ...f, date: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="mb-3">
+            <label className="form-label">
+              Label <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <input
+              className="form-control"
+              placeholder="ex: Fête du Travail"
+              value={form.label}
+              onChange={e => setForm(f => ({ ...f, label: e.target.value }))}
+              required
+            />
+          </div>
+          <div className="mb-0">
+            <label className="form-label">
+              Type <span className="text-danger" aria-hidden="true">*</span>
+            </label>
+            <select
+              className="form-select"
+              value={form.type}
+              onChange={e => setForm(f => ({ ...f, type: e.target.value }))}
+              required
+            >
+              {TYPE_OPTIONS.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+            <div className={(TYPE_HELP[form.type] ?? TYPE_HELP.other).className}>
+              {(TYPE_HELP[form.type] ?? TYPE_HELP.other).text}
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── Edit Modal ── */}
       <Modal
         open={activeModal === 'edit'}
         title="Modifier le jour off"
-        onClose={() => { setActiveModal(null); setModalData(null); }}
+        onClose={() => { if (!isLoading) { setActiveModal(null); setModalData(null); } }}
         size="lg"
         footer={
           <div className="d-flex justify-content-between w-100">
@@ -355,7 +376,7 @@ export function OffDays() {
         <form id="form-edit-offday" onSubmit={handleEdit}>
           <div className="mb-3">
             <label className="form-label">
-              Date <span className="text-danger">*</span>
+              Date <span className="text-danger" aria-hidden="true">*</span>
             </label>
             <input
               type="date"
@@ -367,7 +388,7 @@ export function OffDays() {
           </div>
           <div className="mb-3">
             <label className="form-label">
-              Label <span className="text-danger">*</span>
+              Label <span className="text-danger" aria-hidden="true">*</span>
             </label>
             <input
               className="form-control"
@@ -377,11 +398,14 @@ export function OffDays() {
             />
           </div>
           <div className="mb-3">
-            <label className="form-label">Type</label>
+            <label className="form-label">
+              Type <span className="text-danger" aria-hidden="true">*</span>
+            </label>
             <select
               className="form-select"
               value={editForm.type}
               onChange={e => setEditForm(f => ({ ...f, type: e.target.value }))}
+              required
             >
               {TYPE_OPTIONS.map(o => (
                 <option key={o.value} value={o.value}>{o.label}</option>

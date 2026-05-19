@@ -6,7 +6,9 @@ export const UserForm = ({ formId, form, onChange, onSubmit, roles, showPassword
     <form id={formId} onSubmit={onSubmit}>
       <div className="row g-3">
         <div className="col-md-6">
-          <label className="form-label">Nom</label>
+          <label className="form-label">
+            Nom <span className="text-danger" aria-hidden="true">*</span>
+          </label>
           <input
             className="form-control"
             value={form.nom}
@@ -15,7 +17,9 @@ export const UserForm = ({ formId, form, onChange, onSubmit, roles, showPassword
           />
         </div>
         <div className="col-md-6">
-          <label className="form-label">Prénom</label>
+          <label className="form-label">
+            Prénom <span className="text-danger" aria-hidden="true">*</span>
+          </label>
           <input
             className="form-control"
             value={form.prenom}
@@ -24,7 +28,9 @@ export const UserForm = ({ formId, form, onChange, onSubmit, roles, showPassword
           />
         </div>
         <div className="col-md-6">
-          <label className="form-label">Email</label>
+          <label className="form-label">
+            Email <span className="text-danger" aria-hidden="true">*</span>
+          </label>
           <input
             className="form-control"
             type="email"
@@ -35,7 +41,9 @@ export const UserForm = ({ formId, form, onChange, onSubmit, roles, showPassword
         </div>
         {showPassword && (
           <div className="col-md-6">
-            <label className="form-label">Mot de passe</label>
+            <label className="form-label">
+              Mot de passe <span className="text-danger" aria-hidden="true">*</span>
+            </label>
             <input
               className="form-control"
               type="password"
@@ -55,7 +63,9 @@ export const UserForm = ({ formId, form, onChange, onSubmit, roles, showPassword
         </div>
         {roles && (
           <div className="col-md-6">
-            <label className="form-label">Rôle</label>
+            <label className="form-label">
+              Rôle <span className="text-danger" aria-hidden="true">*</span>
+            </label>
             <select
               className="form-select"
               value={form.roleNom || ''}

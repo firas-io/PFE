@@ -2,7 +2,8 @@
  * modules/auth/ldap.service.js
  * All LDAP I/O lives here. Nothing else should talk to ldapjs directly.
  */
-import ldap from "ldapjs";
+import ldap   from "ldapjs";
+import crypto from "crypto";
 
 function _assertEnv(name) {
   const v = process.env[name];
@@ -17,9 +18,21 @@ function _escape(value) {
     .replace(/\0/g, "\\00");
 }
 
+function _isConnectionError(err) {
+  const code = err?.code || err?.errno;
+  const msg  = String(err?.message || "");
+  return (
+    code === "ECONNREFUSED" ||
+    code === "ETIMEDOUT" ||
+    code === "ENOTFOUND" ||
+    msg.includes("connect") ||
+    msg.includes("Connection")
+  );
+}
+
 function _createClient() {
   const url = _assertEnv("LDAP_URL");
-  const client = ldap.createClient({ url });
+  const client = ldap.createClient({ url, connectTimeout: 5000, timeout: 10000 });
   client.on("error", err => console.error("[LDAP] client error:", err.message));
   return client;
 }
@@ -130,7 +143,11 @@ export async function authenticateUser({ username, password }) {
       },
     };
   } catch (e) {
-    return { ok: false, reason: "INVALID_CREDENTIALS", error: e };
+    return {
+      ok: false,
+      reason: _isConnectionError(e) ? "LDAP_UNAVAILABLE" : "INVALID_CREDENTIALS",
+      error: e,
+    };
   } finally {
     await _unbind(client);
   }
@@ -182,6 +199,12 @@ export async function lookupUserByDn(dn) {
   }
 }
 
+function _hashLdapPassword(password) {
+  const salt = crypto.randomBytes(4);
+  const hash = crypto.createHash("sha1").update(Buffer.from(password)).update(salt).digest();
+  return `{SSHA}${Buffer.concat([hash, salt]).toString("base64")}`;
+}
+
 /**
  * Add a user to LDAP directory.
  */
@@ -198,7 +221,7 @@ export async function addLdapUser({ password, firstName, lastName, email }) {
     const entry     = {
       objectClass: ["inetOrgPerson", "organizationalPerson", "person", "top"],
       cn: `${firstName} ${lastName}`, sn: lastName, givenName: firstName,
-      uid: localPart, mail: email, userPassword: `{PLAIN}${password}`,
+      uid: localPart, mail: email, userPassword: _hashLdapPassword(password),
     };
 
     await new Promise((res, rej) => client.add(userDN, entry, err => (err ? rej(err) : res())));

@@ -16,30 +16,54 @@ function _weekMonday(date) {
   return d;
 }
 
-class AdminStatsService {
-  static async generate() {
-    const today      = new Date(); today.setHours(0, 0, 0, 0);
-    const monday     = _weekMonday(today);
-    const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate() - 7);
-    const lastSunday = new Date(lastMonday); lastSunday.setDate(lastMonday.getDate() + 6); lastSunday.setHours(23, 59, 59, 999);
-    const weekStartKey = _dayKey(lastMonday);
+// Returns { periodStart, periodEnd, periodKey } for a given period descriptor.
+function _resolvePeriod(period = "week", dateFrom, dateTo) {
+  const now   = new Date(); now.setHours(0, 0, 0, 0);
 
-    const existing = await AdminStats.findOne({ week_start: weekStartKey });
+  if (period === "custom" && dateFrom && dateTo) {
+    const start = new Date(dateFrom); start.setHours(0, 0, 0, 0);
+    const end   = new Date(dateTo);   end.setHours(23, 59, 59, 999);
+    return { periodStart: start, periodEnd: end, periodKey: _dayKey(start), period: "custom" };
+  }
+
+  if (period === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { periodStart: start, periodEnd: end, periodKey: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`, period: "month" };
+  }
+
+  if (period === "year") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end   = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
+    return { periodStart: start, periodEnd: end, periodKey: String(now.getFullYear()), period: "year" };
+  }
+
+  // Default: previous week (Mon-Sun)
+  const monday     = _weekMonday(now);
+  const lastMonday = new Date(monday); lastMonday.setDate(monday.getDate() - 7);
+  const lastSunday = new Date(lastMonday); lastSunday.setDate(lastMonday.getDate() + 6); lastSunday.setHours(23, 59, 59, 999);
+  return { periodStart: lastMonday, periodEnd: lastSunday, periodKey: _dayKey(lastMonday), period: "week" };
+}
+
+class AdminStatsService {
+  static async generate({ period = "week", dateFrom, dateTo } = {}) {
+    const { periodStart, periodEnd, periodKey, period: resolvedPeriod } = _resolvePeriod(period, dateFrom, dateTo);
+
+    const existing = await AdminStats.findOne({ period: resolvedPeriod, week_start: periodKey });
     if (existing) return existing;
 
     const [activeUsers, newHabits, weekLogs] = await Promise.all([
       Users.count({ isActive: true }),
-      Habits.count({ createdAt: { $gte: lastMonday, $lte: lastSunday } }),
-      HabitLogs.find({ date: { $gte: lastMonday, $lte: lastSunday } }, { projection: { statut: 1, habit_id: 1 } }),
+      Habits.count({ createdAt: { $gte: periodStart, $lte: periodEnd } }),
+      HabitLogs.find({ date: { $gte: periodStart, $lte: periodEnd } }, { projection: { statut: 1, habit_id: 1 } }),
     ]);
 
     const totalLogs     = weekLogs.length;
     const completedLogs = weekLogs.filter(l => l.statut === "completee").length;
     const avgCompletion = totalLogs ? Math.round((completedLogs / totalLogs) * 100) : 0;
 
-    // Top categories from habits created that week
     const weekHabits = await Habits.find(
-      { createdAt: { $gte: lastMonday, $lte: lastSunday } },
+      { createdAt: { $gte: periodStart, $lte: periodEnd } },
       { projection: { categorie: 1 } }
     );
     const catCount = {};
@@ -53,8 +77,10 @@ class AdminStatsService {
       .slice(0, 5);
 
     const stat = await AdminStats.insertOne({
-      period:       "week",
-      week_start:   weekStartKey,
+      period:       resolvedPeriod,
+      week_start:   periodKey,
+      period_start: periodStart,
+      period_end:   periodEnd,
       stats: {
         activeUsers,
         totalHabitsCreated: newHabits,
@@ -65,16 +91,17 @@ class AdminStatsService {
       generated_at: new Date(),
     });
 
-    logger.info({ action: "admin-stats-cron", week_start: weekStartKey }, "Admin stats generated");
+    logger.info({ action: "admin-stats-generate", period: resolvedPeriod, periodKey }, "Admin stats generated");
     return stat;
   }
 
-  static async getLast12Weeks() {
-    const existing = await AdminStats.find({ period: "week" }, { sort: { week_start: -1 }, limit: 1 });
+  static async getLast12Weeks({ period, dateFrom, dateTo } = {}) {
+    const resolvedPeriod = period || "week";
+    const existing = await AdminStats.find({ period: resolvedPeriod }, { sort: { week_start: -1 }, limit: 1 });
     if (!existing || existing.length === 0) {
-      try { await AdminStatsService.generate(); } catch (_) { /* ignore if no data yet */ }
+      try { await AdminStatsService.generate({ period: resolvedPeriod, dateFrom, dateTo }); } catch (_) { /* ignore if no data yet */ }
     }
-    return AdminStats.find({ period: "week" }, { sort: { week_start: -1 }, limit: 12 });
+    return AdminStats.find({ period: resolvedPeriod }, { sort: { week_start: -1 }, limit: 12 });
   }
 }
 

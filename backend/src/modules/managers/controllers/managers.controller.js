@@ -7,7 +7,7 @@ const _h = (fn) => async (req, reply) => {
 };
 
 // ─── Admin: managers CRUD ───────────────────────────────────────────────────
-const getManagers    = _h(async (_req, reply) => { reply.send(await ManagersService.getManagers()); });
+const getManagers    = _h(async (req, reply) => { reply.send(await ManagersService.getManagers(req.query)); });
 const createManager  = _h(async (req, reply)  => { reply.code(httpStatus.CREATED).send(await ManagersService.createManager(req.body)); });
 const updateManager  = _h(async (req, reply)  => { reply.send(await ManagersService.updateManager(req.params.id, req.body)); });
 const deleteManager  = _h(async (req, reply)  => {

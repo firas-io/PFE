@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export const Modal = ({ open, title, subtitle, children, onClose, footer, size }) => {
+export const Modal = ({ open, title, subtitle, children, onClose, footer, size, scrollable }) => {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
@@ -14,7 +14,11 @@ export const Modal = ({ open, title, subtitle, children, onClose, footer, size }
 
   if (typeof window === 'undefined' || !open) return null;
 
-  const sizeClass = size === 'lg' ? 'modal-dialog modal-lg' : 'modal-dialog';
+  const sizeClass = [
+    'modal-dialog',
+    size === 'lg' ? 'modal-lg' : '',
+    scrollable !== false ? 'modal-dialog-scrollable' : '',
+  ].filter(Boolean).join(' ');
 
   return createPortal(
     <>

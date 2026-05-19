@@ -2,6 +2,25 @@ import fp from "fastify-plugin";
 import { Users } from "@/modules/users/models/User.model.js";
 import { Roles } from "@/modules/roles/models/Role.model.js";
 
+// ─── In-memory permissions cache (TTL: 60s) ───────────────────────────────────
+const rolesCache = new Map(); // key: roleId, value: { permissions, cachedAt }
+const CACHE_TTL  = 60 * 1000;
+
+async function getPermissionsForRole(roleId) {
+  if (!roleId) return [];
+  const key    = String(roleId);
+  const cached = rolesCache.get(key);
+  if (cached && Date.now() - cached.cachedAt < CACHE_TTL) return cached.permissions;
+  const role        = await Roles.findById(roleId);
+  const permissions = Array.isArray(role?.permissions) ? role.permissions : [];
+  rolesCache.set(key, { permissions, cachedAt: Date.now() });
+  return permissions;
+}
+
+export function invalidateRoleCache(roleId) {
+  rolesCache.delete(String(roleId));
+}
+
 // ─── Ability → permission string mapping ─────────────────────────────────────
 const ABILITY_MAP = {
   "read:Habit":           ["HABITS_VIEW"],
@@ -56,26 +75,36 @@ async function jwtPlugin(fastify) {
       if (!user) return reply.code(401).send({ code: "AUTH-001", message: "Unauthorized" });
       if (!user.isActive) return reply.code(403).send({ code: "AUTH-002", message: "User deactivated" });
 
-      const role = user.role_id ? await Roles.findById(user.role_id) : null;
+      const role        = user.role_id ? await Roles.findById(user.role_id) : null;
+      const permissions = await getPermissionsForRole(user.role_id);
+
       request.user.id          = user._id;
       request.user.email       = user.email;
       request.user.role        = role?.nom ?? null;
-      request.user.permissions = role?.permissions ?? [];
+      request.user.role_id     = user.role_id ?? null;
+      request.user.permissions = permissions;
     } catch {
       reply.code(401).send({ code: "AUTH-001", message: "Unauthorized" });
     }
   });
 
   // ─── verifyAbility ──────────────────────────────────────────────────────────
+  // Reads permissions live from the DB cache so that admin permission changes
+  // take effect within CACHE_TTL (60 s) without requiring a new token.
   fastify.decorate("verifyAbility", function (abilities) {
     return async function (request, reply) {
       if (reply.sent) return;
-      const userPerms = request.user?.permissions || [];
-      if (userPerms.includes("ALL")) return;
+
+      // Refresh permissions from cache (may have been updated since token was issued)
+      const livePerms = request.user?.role_id
+        ? await getPermissionsForRole(request.user.role_id)
+        : (request.user?.permissions || []);
+
+      if (livePerms.includes("ALL")) return;
 
       for (const { action, subject } of abilities) {
         const required = ABILITY_MAP[`${action}:${subject}`] || [];
-        const has = required.some(p => userPerms.includes(p));
+        const has = required.some(p => livePerms.includes(p));
         if (!has) {
           return reply.code(403).send({
             code: "AUTH-003",
@@ -101,9 +130,11 @@ async function jwtPlugin(fastify) {
   fastify.decorate("authenticate", fastify.verifyAccessToken);
   fastify.decorate("authorize", function (requiredPermissions) {
     return async (request, reply) => {
-      const userPerms = request.user?.permissions || [];
-      if (userPerms.includes("ALL")) return;
-      const has = requiredPermissions.some(p => userPerms.includes(p));
+      const livePerms = request.user?.role_id
+        ? await getPermissionsForRole(request.user.role_id)
+        : (request.user?.permissions || []);
+      if (livePerms.includes("ALL")) return;
+      const has = requiredPermissions.some(p => livePerms.includes(p));
       if (!has) reply.code(403).send({ code: "AUTH-003", message: `Required: [${requiredPermissions.join(", ")}]` });
     };
   });

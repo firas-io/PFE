@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Archive, CalendarDays, Check, ChevronDown,
-  Copy, FileText, Flame, Pause, Pencil, Play,
+  Copy, FileText, Flame, MoreHorizontal, Pause, Pencil, Play,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useCategories } from '@/hooks/useCategories';
@@ -12,6 +12,14 @@ import { FREQUENCY_LABELS, PRIORITY_LABELS } from '../../_constants';
 
 const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 const DAY_LABELS  = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+
+// ─── Dropdown menu item style ────────────────────────────────────────────────
+const MI = (color) => ({
+  display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+  padding: '8px 14px', border: 'none', background: 'none',
+  fontSize: 13, fontWeight: 500, color: color || 'var(--hf-text)',
+  cursor: 'pointer', textAlign: 'left', fontFamily: 'inherit',
+});
 
 // ─── Action button (compact) ─────────────────────────────────────────────────
 const BTN_STYLES = {
@@ -95,13 +103,18 @@ export function HabitCard({
   onNotes,
   onUpdateDate,
   onToggleDay,
+  canManage = true,
 }) {
+  const isGlobal = !!(habit.is_global || habit.created_by_admin);
   const { getBySlug } = useCategories();
   const [expanded, setExpanded] = useState(false);
 
   const category = getBySlug(habit.categorie ?? '');
   const catColor = category?.color ?? '#6b7280';
   const CatIcon  = resolveLucideIcon(category?.icon ?? 'Circle');
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuPos,  setMenuPos]  = useState({ top: 0, left: 0 });
 
   const isCompleted = todayStatus?.statut === 'completee';
   const isArchived  = habit.statut === 'archived';
@@ -141,84 +154,170 @@ export function HabitCard({
       />
 
       {/* ── MAIN ROW ─────────────────────────────────────────────────────────── */}
-      <div className="d-flex align-items-center gap-3 ps-3 pe-4 py-3">
+      <div className="ps-3 pe-3 pt-3 pb-2">
 
-        {/* Category icon (small) */}
-        <span
-          className="d-flex h-8 w-8 flex-shrink-0 align-items-center justify-content-center rounded-3 text-white shadow-sm"
-          style={{ backgroundColor: catColor }}
-          aria-hidden
-        >
-          <CatIcon className="h-4 w-4" />
-        </span>
+        {/* Top line: icon + title + actions + expand */}
+        <div className="d-flex align-items-center gap-3">
 
-        {/* Title + meta */}
-        <div className="min-w-0 flex-fill">
-          <div className="d-flex align-items-center gap-2 flex-wrap">
-            <h3
-              className={cn(
-                'text-sm fw-bold leading-tight text-body text-truncate',
-                isCompleted && 'text-muted line-through decoration-2'
-              )}
-            >
-              {habit.nom || habit.titre || 'Habitude'}
-            </h3>
-            {category && (
-              <span
-                className="flex-shrink-0 rounded-pill px-2 py-0.5 text-[10px] fw-semibold"
-                style={{ backgroundColor: `${catColor}22`, color: catColor }}
+          {/* Category icon (small) */}
+          <span
+            className="d-flex h-8 w-8 flex-shrink-0 align-items-center justify-content-center rounded-3 text-white shadow-sm"
+            style={{ backgroundColor: catColor }}
+            aria-hidden
+          >
+            <CatIcon className="h-4 w-4" />
+          </span>
+
+          {/* Title + meta */}
+          <div className="min-w-0 flex-fill">
+            <div className="d-flex align-items-center gap-2 flex-wrap">
+              <h3
+                className={cn(
+                  'text-sm fw-bold leading-tight text-body text-truncate',
+                  isCompleted && 'text-muted line-through decoration-2'
+                )}
               >
-                {category.label}
+                {habit.nom || habit.titre || 'Habitude'}
+              </h3>
+              {category && (
+                <span
+                  className="flex-shrink-0 rounded-pill px-2 py-0.5 text-[10px] fw-semibold"
+                  style={{ backgroundColor: `${catColor}22`, color: catColor }}
+                >
+                  {category.label}
+                </span>
+              )}
+              {isGlobal && (
+                <span className="flex-shrink-0 rounded-pill px-2 py-0.5 text-[10px] fw-semibold bg-primary/10 text-primary border border-primary/20">
+                  🌐 Global
+                </span>
+              )}
+            </div>
+
+            <div className="mt-0.5 d-flex align-items-center gap-2 text-xs text-muted">
+              {habit.frequence && (
+                <span>{FREQUENCY_LABELS[habit.frequence] || habit.frequence}</span>
+              )}
+              {habit.priorite && habit.priorite !== 'low' && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span className={cn(
+                    'fw-medium',
+                    habit.priorite === 'high' ? 'text-destructive' : 'text-warning'
+                  )}>
+                    ⚑ {PRIORITY_LABELS[habit.priorite]}
+                  </span>
+                </>
+              )}
+              {localStreak > 0 && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span className="d-flex align-items-center gap-0.5 text-orange-500 fw-semibold">
+                    <Flame className="h-3 w-3" />
+                    {localStreak} jour{localStreak > 1 ? 's' : ''}
+                  </span>
+                </>
+              )}
+              <span className="opacity-40">·</span>
+              <span className={cn(
+                'fw-medium',
+                isPaused   ? 'text-warning' :
+                isArchived ? 'text-muted'   :
+                             'text-success'
+              )}>
+                {isPaused ? '⏸ Pause' : isArchived ? 'Archivé' : '● Actif'}
               </span>
-            )}
+              {isCompleted && (
+                <>
+                  <span className="opacity-40">·</span>
+                  <span className="d-flex align-items-center gap-0.5 text-success fw-semibold">
+                    <Check className="h-3 w-3" strokeWidth={3} /> Fait
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
-          <div className="mt-0.5 d-flex align-items-center gap-2 text-xs text-muted">
-            {habit.frequence && (
-              <span>{FREQUENCY_LABELS[habit.frequence] || habit.frequence}</span>
-            )}
-            {habit.priorite && habit.priorite !== 'low' && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className={cn(
-                  'fw-medium',
-                  habit.priorite === 'high' ? 'text-destructive' : 'text-warning'
-                )}>
-                  ⚑ {PRIORITY_LABELS[habit.priorite]}
-                </span>
-              </>
-            )}
-            {localStreak > 0 && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="d-flex align-items-center gap-0.5 text-orange-500 fw-semibold">
-                  <Flame className="h-3 w-3" />
-                  {localStreak} jour{localStreak > 1 ? 's' : ''}
-                </span>
-              </>
-            )}
-            <span className="opacity-40">·</span>
-            <span className={cn(
-              'fw-medium',
-              isPaused   ? 'text-warning'          :
-              isArchived ? 'text-muted' :
-                           'text-success'
-            )}>
-              {isPaused ? '⏸ Pause' : isArchived ? 'Archivé' : '● Actif'}
-            </span>
-            {isCompleted && (
-              <>
-                <span className="opacity-40">·</span>
-                <span className="d-flex align-items-center gap-0.5 text-success fw-semibold">
-                  <Check className="h-3 w-3" strokeWidth={3} /> Fait
-                </span>
-              </>
-            )}
-          </div>
+          {/* Actions — single ⋯ trigger */}
+        <div className="flex-shrink-0 ml-1" style={{ position: 'relative' }}>
+          <ActionBtn
+            onClick={(e) => {
+              const rect = e.currentTarget.getBoundingClientRect();
+              setMenuPos({ top: rect.bottom + 4, left: rect.right - 170 });
+              setMenuOpen((v) => !v);
+            }}
+            disabled={disabled}
+            title="Actions"
+            variant="edit"
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </ActionBtn>
+
+          {menuOpen && (
+            <>
+              <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 1299 }} />
+              <div style={{
+                position: 'fixed', top: menuPos.top, left: menuPos.left,
+                background: '#fff', border: '1px solid #E8E7F5', borderRadius: 10,
+                boxShadow: '0 8px 24px rgba(67,56,202,0.10)', minWidth: 180,
+                zIndex: 1300, overflow: 'hidden',
+              }}>
+                {canManage && !isGlobal && (
+                  <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F5F3FF'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onEdit(habit); }}>
+                    <Pencil size={14} style={{ color: '#6366F1' }} /> Modifier
+                  </button>
+                )}
+                {canManage && (
+                  <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F5F3FF'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onClone(habit._id); }}>
+                    <Copy size={14} style={{ color: '#6366F1' }} /> {isGlobal ? 'Dupliquer dans mes habitudes' : 'Dupliquer'}
+                  </button>
+                )}
+                <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F0FDFA'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onNotes(habit); }}>
+                  <FileText size={14} style={{ color: habit.note ? '#0D9488' : '#6366F1' }} /> {habit.note ? 'Modifier les notes' : 'Ajouter des notes'}
+                </button>
+                {canManage && (
+                  <>
+                    <div style={{ height: 1, background: '#F0EFF9', margin: '2px 0' }} />
+                    {isActive ? (
+                      <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#FFFBEB'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onTogglePause(habit._id, 'pause'); }}>
+                        <Pause size={14} style={{ color: '#F59E0B' }} /> Mettre en pause
+                      </button>
+                    ) : (
+                      <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F0FDF4'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onTogglePause(habit._id, 'active'); }}>
+                        <Play size={14} style={{ color: '#10B981' }} /> Reprendre
+                      </button>
+                    )}
+                    {!isArchived && (
+                      <>
+                        <div style={{ height: 1, background: '#F0EFF9', margin: '2px 0' }} />
+                        <button type="button" style={MI('#EF4444')} onMouseEnter={e=>e.currentTarget.style.background='#FEF2F2'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onArchive(habit._id); }}>
+                          <Archive size={14} /> {isGlobal ? 'Retirer de mon espace' : 'Archiver'}
+                        </button>
+                      </>
+                    )}
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
 
-        {/* Day letter circles */}
-        <div className="d-flex align-items-center gap-1 flex-shrink-0">
+          {/* Details toggle */}
+          {hasDetails && (
+            <button
+              type="button"
+              onClick={() => setExpanded(v => !v)}
+              className="flex-shrink-0 d-flex align-items-center justify-content-center rounded text-muted hover:text-foreground hover:bg-muted transition-all-custom ml-0.5"
+              style={{ width: 22, height: 22 }}
+              title={expanded ? 'Masquer les détails' : 'Voir les détails'}
+            >
+              <ChevronDown className={cn('transition-transform duration-200', expanded && 'rotate-180')} style={{ width: 14, height: 14 }} />
+            </button>
+          )}
+        </div>{/* end top line */}
+
+        {/* Day circles — full width row below */}
+        <div className="d-flex align-items-center gap-1 mt-2 ps-1">
           {DAY_LETTERS.map((letter, i) => {
             const isDone  = weeklyCompletion[i] === true;
             const isToday = i === todayIndex;
@@ -247,46 +346,7 @@ export function HabitCard({
             );
           })}
         </div>
-
-        {/* Actions (appear on hover) */}
-        <div className="d-flex align-items-center gap-1 flex-shrink-0 ml-1">
-          <ActionBtn onClick={() => onEdit(habit)} disabled={disabled} title="Modifier" variant="edit">
-            <Pencil className="h-3.5 w-3.5" />
-          </ActionBtn>
-          <ActionBtn onClick={() => onClone(habit._id)} disabled={disabled} title="Dupliquer" variant="clone">
-            <Copy className="h-3.5 w-3.5" />
-          </ActionBtn>
-          {isActive ? (
-            <ActionBtn onClick={() => onTogglePause(habit._id, 'pause')} disabled={disabled} title="Mettre en pause" variant="pause">
-              <Pause className="h-3.5 w-3.5" />
-            </ActionBtn>
-          ) : (
-            <ActionBtn onClick={() => onTogglePause(habit._id, 'active')} disabled={disabled} title="Reprendre" variant="pause">
-              <Play className="h-3.5 w-3.5" />
-            </ActionBtn>
-          )}
-          <ActionBtn onClick={() => onNotes(habit)} disabled={disabled} title={habit.note ? 'Modifier les notes' : 'Ajouter des notes'} variant="notes">
-            <FileText className="h-3.5 w-3.5" />
-          </ActionBtn>
-          {habit.statut !== 'archived' && (
-            <ActionBtn onClick={() => onArchive(habit._id)} disabled={disabled} title="Archiver" variant="archive">
-              <Archive className="h-3.5 w-3.5" />
-            </ActionBtn>
-          )}
-        </div>
-
-        {/* Details toggle */}
-        {hasDetails && (
-          <button
-            type="button"
-            onClick={() => setExpanded(v => !v)}
-            className="flex-shrink-0 d-flex h-6 w-6 align-items-center justify-content-center rounded text-muted hover:text-foreground hover:bg-muted transition-all-custom ml-0.5"
-            title={expanded ? 'Masquer les détails' : 'Voir les détails'}
-          >
-            <ChevronDown className={cn('h-3.5 w-3.5 transition-transform duration-200', expanded && 'rotate-180')} />
-          </button>
-        )}
-      </div>
+      </div>{/* end card body */}
 
       {/* ── DATE + EXPANDABLE DETAILS ─────────────────────────────────────────── */}
       <AnimatePresence initial={false}>

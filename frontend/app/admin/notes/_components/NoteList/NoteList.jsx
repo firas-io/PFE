@@ -22,7 +22,7 @@ export const NoteList = () => {
     try {
       const params = new URLSearchParams();
       params.append('page', pageNum.toString());
-      params.append('limit', '20');
+      params.append('limit', '5');
       if (searchQuery) params.append('search', searchQuery);
       const response = await apiFetch(`/managers/users/notes?${params}`, {
         headers: { Authorization: `Bearer ${getToken()}` },
@@ -80,7 +80,7 @@ export const NoteList = () => {
 
       {pagination.total > 0 && (
         <div className="mt-2 text-secondary" style={{ fontSize: 12 }}>
-          Affichage de {(page - 1) * 20 + 1}–{Math.min(page * 20, pagination.total)} sur {pagination.total} notes
+          Affichage de {(page - 1) * 5 + 1}–{Math.min(page * 5, pagination.total)} sur {pagination.total} notes
         </div>
       )}
     </div>

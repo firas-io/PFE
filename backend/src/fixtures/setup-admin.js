@@ -52,32 +52,12 @@ const DEFAULT_ROLES = [
       "PROGRESS_VIEW",
       "ONBOARDING_VIEW",
       "REMINDERS_VIEW",
-      "SESSIONS_VIEW"
+      "SESSIONS_VIEW",
+      "OFFDAYS_VIEW",
     ]
   }
 ];
 
-const MANAGER_PERMISSIONS = [
-  "MANAGER_USERS_VIEW", "MANAGER_USERS_MANAGE",
-  "HABITS_VIEW", "HABITS_CREATE", "HABITS_MANAGE",
-  "LOGS_VIEW", "LOGS_MANAGE",
-  "PROGRESS_VIEW",
-  "ONBOARDING_VIEW",
-  "REMINDERS_VIEW",
-  "SESSIONS_VIEW",
-  "OFFDAYS_VIEW",
-  "STATS_VIEW",
-];
-
-const USER_PERMISSIONS = [
-  "SELF_VIEW", "SELF_EDIT",
-  "HABITS_VIEW", "HABITS_CREATE", "HABITS_MANAGE",
-  "LOGS_VIEW", "LOGS_MANAGE",
-  "PROGRESS_VIEW",
-  "ONBOARDING_VIEW",
-  "REMINDERS_VIEW",
-  "SESSIONS_VIEW",
-];
 
 export async function setupAdmin(fastify) {
   try {
@@ -90,21 +70,14 @@ export async function setupAdmin(fastify) {
       }
     }
 
-    // Align default role permissions on each boot — use the returned document directly
-    // to avoid any ambiguity from a subsequent findOne in a dirty-state collection.
+    // Only the admin role is re-synced on boot (its permissions are immutable via the UI anyway).
+    // Manager and utilisateur permissions are left as-is so UI edits persist across restarts.
     const adminRole = await Roles.updateOne(
       { nom: "admin" },
       { $set: { permissions: ADMIN_PERMISSIONS, description: "Gestion des managers, consultation des équipes, pilotage applicatif" } }
     );
-    await Roles.updateOne(
-      { nom: "manager" },
-      { $set: { permissions: MANAGER_PERMISSIONS, description: "Responsable d'équipe — gère ses propres utilisateurs" } }
-    );
-    const userRole = await Roles.updateOne(
-      { nom: "utilisateur" },
-      { $set: { permissions: USER_PERMISSIONS, description: "Utilisateur standard" } }
-    );
-    fastify.log.info("Admin role permissions synchronized.");
+    const userRole = await Roles.findOne({ nom: "utilisateur" });
+    fastify.log.info("Default roles verified.");
 
     if (!adminRole || !userRole) {
       fastify.log.error("Default roles could not be created.");
@@ -129,14 +102,11 @@ export async function setupAdmin(fastify) {
       });
       fastify.log.info(`Admin created: ${adminEmail}`);
     } else {
-      // Repair role if needed (migration guard)
-      const existingRole = existingAdmin.role_id
-        ? await Roles.findById(existingAdmin.role_id)
-        : null;
-
-      if (!existingRole || existingRole.nom !== "admin") {
+      // Always ensure the local admin account has the admin role.
+      // This guard runs on every boot so LDAP sync cannot downgrade this account.
+      if (String(existingAdmin.role_id) !== String(adminRole._id)) {
         await Users.updateOne({ _id: existingAdmin._id }, { $set: { role_id: adminRole._id } });
-        fastify.log.info("Admin user role repaired.");
+        fastify.log.info(`Admin user role repaired: ${existingAdmin.role_id} → ${adminRole._id}`);
       }
       fastify.log.info(`Admin ready: ${existingAdmin.email}`);
     }

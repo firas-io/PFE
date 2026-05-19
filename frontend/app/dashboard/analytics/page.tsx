@@ -110,9 +110,9 @@ export default function Analytics() {
       {/* KPI row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
         {[
-          { label: 'CURRENT STREAK', value: `${progress?.summary.active_habits ?? 0}`, sub: 'Days active in a row', color: '#4338CA', icon: '⚡' },
-          { label: 'BEST STREAK',    value: `${bestStreak}`, sub: 'All-time personal record', color: '#7C3AED', icon: '🏆' },
-          { label: 'TOTAL COMPLETIONS', value: String(progress?.summary.completed_logs ?? 0), sub: `${progress?.summary.completion_rate ?? 0}% rate`, color: '#059669', icon: '✓' },
+          { label: 'CURRENT STREAK', value: `${progress?.summary.active_habits ?? 0}`, sub: 'Days active in a row', color: '#4338CA' },
+          { label: 'BEST STREAK',    value: `${bestStreak}`, sub: 'All-time personal record', color: '#7C3AED' },
+          { label: 'TOTAL COMPLETIONS', value: String(progress?.summary.completed_logs ?? 0), sub: `${progress?.summary.completion_rate ?? 0}% rate`, color: '#059669' },
         ].map((kpi, i) => (
           <motion.div key={kpi.label} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.08 }}
             style={{ ...card, position: 'relative', overflow: 'hidden' }}>
@@ -120,7 +120,6 @@ export default function Analytics() {
               <p style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>
                 {kpi.label}
               </p>
-              <span style={{ fontSize: 16 }}>{kpi.icon}</span>
             </div>
             <p style={{ fontSize: 36, fontWeight: 900, color: kpi.color, margin: 0, lineHeight: 1, letterSpacing: '-1px' }}>{kpi.value}</p>
             <p style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>{kpi.sub}</p>
@@ -199,7 +198,7 @@ export default function Analytics() {
         {/* Struggling habits */}
         <div style={card}>
           <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span>⚠️</span> Struggling Habits
+            Struggling Habits
           </h3>
           {habitBreakdown.filter(h => h.completion_rate < 50).length === 0 ? (
             <div style={{
@@ -207,7 +206,7 @@ export default function Analytics() {
               border: '1px solid #BBF7D0', textAlign: 'center',
             }}>
               <p style={{ fontSize: 13, color: '#059669', fontWeight: 600, margin: 0 }}>
-                🎉 Toutes vos habitudes sont en bonne forme !
+                Toutes vos habitudes sont en bonne forme !
               </p>
             </div>
           ) : (
@@ -242,7 +241,6 @@ export default function Analytics() {
         }}>
           <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-            <span style={{ fontSize: 14 }}>✨</span>
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>
               AI OPTIMIZATIONS
             </span>

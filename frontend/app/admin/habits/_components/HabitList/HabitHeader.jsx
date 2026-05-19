@@ -14,6 +14,7 @@ export const HabitHeader = ({
   loading,
   onOpenCreate,
   total,
+  canManage,
 }) => {
   return (
     <>
@@ -22,11 +23,13 @@ export const HabitHeader = ({
           <h1 className="adm-title">Habitudes</h1>
           <p className="adm-subtitle">{loading ? 'Chargement…' : `${total ?? 0} habitude${(total ?? 0) !== 1 ? 's' : ''}`}</p>
         </div>
-        <div className="adm-header-actions">
-          <button className="btn btn-primary" type="button" onClick={onOpenCreate} disabled={loading}>
-            <IconPlus size={16} className="me-2" />Nouvelle habitude
-          </button>
-        </div>
+        {canManage && (
+          <div className="adm-header-actions">
+            <button className="btn btn-primary" type="button" onClick={onOpenCreate} disabled={loading}>
+              <IconPlus size={16} className="me-2" />Nouvelle habitude
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="adm-toolbar">
@@ -35,7 +38,7 @@ export const HabitHeader = ({
           <input
             className="form-control"
             style={{ paddingLeft: 32 }}
-            placeholder="Rechercher par titre…"
+            placeholder="Rechercher (titre, description, catégorie)…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

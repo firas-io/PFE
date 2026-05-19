@@ -4,9 +4,30 @@ import { motion } from "framer-motion";
 import { Flame, Target, TrendingUp, Trophy, Zap, CheckCircle2, Circle } from "lucide-react";
 import { apiFetch } from "@/lib/api";
 import { getUser } from "@/lib/auth";
+import { canCreateHabits } from "@/src/utils/permissions";
 import { userFirstName } from "@/lib/userDisplay";
 import { useToast } from "@/components/Toast";
 import { HabitItem, type HabitProgressItem } from "../_components/HabitItem";
+import DateFilter, { type DateFilterValue } from "@/components/DateFilter";
+import GlobalHabitCard from "@/components/GlobalHabitCard";
+
+interface GlobalHabit {
+  _id: string;
+  nom: string;
+  description?: string;
+  categorie?: string;
+  frequence?: string;
+  priorite?: string;
+  objectif_valeur?: number;
+  objectif_unite?: string;
+  isActivated: boolean;
+  userSettings?: {
+    note?: string;
+    objectif_perso?: string;
+    priorite_perso?: string;
+    statut_perso?: string;
+  } | null;
+}
 
 interface ProgressData {
   summary: {
@@ -83,18 +104,36 @@ export default function DashboardHome() {
   const [today,    setToday]    = useState<TodayData | null>(null);
   const [loading,  setLoading]  = useState(true);
   const [togglingHabitId, setTogglingHabitId] = useState<string | null>(null);
-  const [user, setUser] = useState<{ firstName?: string; lastName?: string; prenom?: string; nom?: string } | null>(null);
+  const [user, setUser] = useState<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; permissions?: string[] } | null>(null);
+  const [globalHabits, setGlobalHabits] = useState<GlobalHabit[]>([]);
+
+  const loadProgress = (range?: DateFilterValue | null) => {
+    const params = new URLSearchParams();
+    if (range?.dateFrom) params.set('dateFrom', range.dateFrom);
+    if (range?.dateTo)   params.set('dateTo', range.dateTo);
+    const query = params.toString() ? `?${params}` : '';
+    return apiFetch<ProgressData>(`/progress/my${query}`);
+  };
+
+  const loadGlobalHabits = () =>
+    apiFetch<GlobalHabit[]>("/habits/global").then(setGlobalHabits).catch(() => {});
 
   useEffect(() => {
-    setUser(getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string }>());
+    const stored = getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; permissions?: string[] }>();
+    setUser(stored);
     Promise.all([
-      apiFetch<ProgressData>("/progress/my"),
+      loadProgress(),
       apiFetch<TodayData>("/progress/today"),
     ])
       .then(([p, t]) => { setProgress(p); setToday(t); })
       .catch(console.error)
       .finally(() => setLoading(false));
+    loadGlobalHabits();
   }, []);
+
+  function handleDateChange(range: DateFilterValue) {
+    loadProgress(range).then(setProgress).catch(console.error);
+  }
 
   const todayHabits = useMemo<HabitProgressItem[]>(() => {
     if (!progress || !today) return progress?.habits_progress.slice(0, 6) ?? [];
@@ -212,10 +251,10 @@ export default function DashboardHome() {
       {/* ── KPI row ─────────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12 }}>
         {[
-          { label: 'Habitudes actives', value: progress?.summary.active_habits ?? 0, color: '#4338CA', bg: '#EEF2FF', icon: '⚡' },
-          { label: 'Taux global',        value: `${progress?.summary.completion_rate ?? 0}%`, color: '#059669', bg: '#ECFDF5', icon: '📈' },
-          { label: 'Total logs',          value: progress?.summary.total_logs ?? 0, color: '#D97706', bg: '#FFFBEB', icon: '🏆' },
-          { label: 'Complétés',          value: progress?.summary.completed_logs ?? 0, color: '#7C3AED', bg: '#F5F3FF', icon: '✓' },
+          { label: 'Habitudes actives', value: progress?.summary.active_habits ?? 0, color: '#4338CA' },
+          { label: 'Taux global',        value: `${progress?.summary.completion_rate ?? 0}%`, color: '#059669' },
+          { label: 'Total logs',          value: progress?.summary.total_logs ?? 0, color: '#D97706' },
+          { label: 'Complétés',          value: progress?.summary.completed_logs ?? 0, color: '#7C3AED' },
         ].map(card => (
           <motion.div
             key={card.label}
@@ -228,12 +267,8 @@ export default function DashboardHome() {
               boxShadow: '0 1px 4px rgba(0,0,0,0.05)',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div style={{ marginBottom: 8 }}>
               <p style={{ fontSize: 11, color: '#64748B', fontWeight: 500, margin: 0 }}>{card.label}</p>
-              <span style={{
-                width: 28, height: 28, borderRadius: 8, background: card.bg,
-                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13,
-              }}>{card.icon}</span>
             </div>
             <p style={{ fontSize: 26, fontWeight: 900, color: card.color, margin: 0, letterSpacing: '-0.5px', lineHeight: 1 }}>
               {card.value}
@@ -241,6 +276,30 @@ export default function DashboardHome() {
           </motion.div>
         ))}
       </div>
+
+      {/* ── Date filter ─────────────────────────────────────── */}
+      <DateFilter onChange={handleDateChange} />
+
+      {/* ── Global habits ───────────────────────────────────── */}
+      {globalHabits.length > 0 && (
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div>
+              <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1E1B4B', margin: 0 }}>
+                Habitudes disponibles
+              </h2>
+              <p style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
+                Activez les habitudes proposées par l&apos;administration
+              </p>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 8 }}>
+            {globalHabits.map(habit => (
+              <GlobalHabitCard key={habit._id} habit={habit} onRefresh={loadGlobalHabits} />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Content grid ────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
@@ -250,7 +309,7 @@ export default function DashboardHome() {
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
             <div>
               <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1E1B4B', margin: 0 }}>
-                📋 Today&apos;s Habits
+                Today&apos;s Habits
               </h2>
               <p style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
                 Cliquez sur le cercle pour marquer comme fait
@@ -292,7 +351,7 @@ export default function DashboardHome() {
           {/* Active Streaks */}
           <div style={{ background: '#fff', borderRadius: 16, padding: '16px', border: '1px solid #E5E7EB' }}>
             <h3 style={{ fontSize: 13, fontWeight: 700, color: '#1E1B4B', margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              🔥 Active Streaks
+              Active Streaks
             </h3>
             {[...todayHabits]
               .sort((a, b) => b.current_streak - a.current_streak)

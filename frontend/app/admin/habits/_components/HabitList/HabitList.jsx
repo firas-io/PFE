@@ -3,11 +3,15 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 import { apiFetch } from '@/lib/api';
-import { getToken } from '@/lib/auth';
+import { searchHabits } from '@/lib/search';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
+import { getToken, getUser } from '@/lib/auth';
+import { canManageHabits } from '@/src/utils/permissions';
 import { AddHabitModal } from '../AddHabitModal';
 import { UpdateHabitModal } from '../UpdateHabitModal';
 import { HabitHeader } from './HabitHeader';
 import { HabitTable } from './HabitTable';
+import Pagination from '@/components/Pagination';
 
 const priorityRank = (value) => {
   if (value === 'high') return 3;
@@ -25,52 +29,84 @@ const statusRank = (value) => {
 export const HabitList = () => {
   const searchParams = useSearchParams();
   const [token, setToken] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [habits, setHabits] = useState([]);
+  const [pagination, setPagination] = useState({ pages: 1, currentPage: 1 });
+  const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedHabit, setSelectedHabit] = useState(null);
 
-  const refresh = useCallback(async () => {
+  const debouncedSearch = useDebouncedValue(search.trim(), 350);
+
+  const refresh = useCallback(async (page = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const habitData = await apiFetch('/habits?includeArchived=true');
-      setHabits(habitData);
+      const showActiveOnly = searchParams?.get('active') === 'true';
+      const filterStatut = showActiveOnly ? 'active' : (statusFilter !== 'all' ? statusFilter : undefined);
+
+      if (debouncedSearch) {
+        const result = await searchHabits({
+          q: debouncedSearch,
+          page,
+          limit: 5,
+          includeArchived: true,
+          statut: filterStatut,
+        });
+        setHabits(result.data ?? []);
+        setPagination(result.pagination ?? { pages: 1, currentPage: page });
+      } else {
+        const params = new URLSearchParams({ includeArchived: 'true', page: String(page), limit: '5' });
+        const result = await apiFetch(`/habits?${params}`);
+        if (result && result.data) {
+          setHabits(result.data);
+          setPagination(result.pagination);
+        } else {
+          setHabits(Array.isArray(result) ? result : []);
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Impossible de charger les habitudes.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [debouncedSearch, statusFilter, searchParams]);
 
-  useEffect(() => { setToken(getToken()); }, []);
-  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+  useEffect(() => { setToken(getToken()); setCurrentUser(getUser()); }, []);
+  useEffect(() => {
+    if (token) {
+      setCurrentPage(1);
+      refresh(1);
+    }
+  }, [token, debouncedSearch, statusFilter, refresh]);
+
+  function handlePageChange(page) {
+    setCurrentPage(page);
+    refresh(page);
+  }
 
   const displayedHabits = useMemo(() => {
-    const showActiveOnly = searchParams?.get('active') === 'true';
-    const filterStatut = showActiveOnly ? 'active' : statusFilter;
-
     let list = habits.slice();
-    if (filterStatut !== 'all') {
-      list = list.filter((h) => (h.statut || 'active') === filterStatut);
-    }
-    const q = search.trim().toLowerCase();
-    if (q) {
-      list = list.filter((h) =>
-        (h.nom || '').toLowerCase().includes(q) ||
-        (h.description || '').toLowerCase().includes(q),
-      );
+    if (!debouncedSearch) {
+      const showActiveOnly = searchParams?.get('active') === 'true';
+      const filterStatut = showActiveOnly ? 'active' : statusFilter;
+      if (filterStatut !== 'all') {
+        list = list.filter((h) => (h.statut || 'active') === filterStatut);
+      }
     }
     if (sortBy === 'priority_desc') list.sort((a, b) => priorityRank(b.priorite) - priorityRank(a.priorite));
     else if (sortBy === 'priority_asc') list.sort((a, b) => priorityRank(a.priorite) - priorityRank(b.priorite));
     else if (sortBy === 'status') list.sort((a, b) => statusRank(a.statut) - statusRank(b.statut));
     else list.reverse();
     return list;
-  }, [habits, statusFilter, search, sortBy, searchParams]);
+  }, [habits, statusFilter, debouncedSearch, sortBy, searchParams]);
+
+  const canManage = canManageHabits(currentUser);
 
   return (
     <div className="adm-page">
@@ -86,6 +122,7 @@ export const HabitList = () => {
         loading={loading}
         onOpenCreate={() => setShowAddModal(true)}
         total={displayedHabits.length}
+        canManage={canManage}
       />
 
       <HabitTable
@@ -93,6 +130,13 @@ export const HabitList = () => {
         loading={loading}
         onEdit={(habit) => setSelectedHabit(habit)}
         onRefetch={refresh}
+        canManage={canManage}
+      />
+
+      <Pagination
+        currentPage={pagination.currentPage}
+        totalPages={pagination.pages}
+        onPageChange={handlePageChange}
       />
 
       <AddHabitModal

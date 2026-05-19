@@ -1,5 +1,6 @@
 'use client';
 import React from 'react';
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-react';
 import { userFirstName, userLastName } from '@/lib/userDisplay';
 
 export const NoteTable = ({ notes, loading, page, pagination, onPageChange }) => {
@@ -66,7 +67,7 @@ export const NoteTable = ({ notes, loading, page, pagination, onPageChange }) =>
             Page {page} sur {pagination.pages}
           </span>
           <div className="adm-pagination-btns">
-            <button className="adm-pagination-btn" onClick={() => onPageChange(page - 1)} disabled={page === 1}>← Précédent</button>
+            <button className="adm-pagination-btn" onClick={() => onPageChange(page - 1)} disabled={page === 1}><IconChevronLeft size={14} /></button>
             {Array.from({ length: pagination.pages }, (_, i) => i + 1)
               .filter((p) => Math.abs(p - page) <= 1 || p === 1 || p === pagination.pages)
               .map((p, i, arr) => (
@@ -79,7 +80,7 @@ export const NoteTable = ({ notes, loading, page, pagination, onPageChange }) =>
                   >{p}</button>
                 </React.Fragment>
               ))}
-            <button className="adm-pagination-btn" onClick={() => onPageChange(page + 1)} disabled={page === pagination.pages}>Suivant →</button>
+            <button className="adm-pagination-btn" onClick={() => onPageChange(page + 1)} disabled={page === pagination.pages}><IconChevronRight size={14} /></button>
           </div>
         </div>
       )}

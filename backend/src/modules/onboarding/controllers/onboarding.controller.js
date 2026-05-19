@@ -1,7 +1,7 @@
 import { Onboardings } from "../models/Onboarding.model.js";
 import { Users }       from "@/modules/users/models/User.model.js";
 import { createError }  from "@/core/errors.js";
-import { CATEGORY_SLUGS } from "@/shared/constants/categories.js";
+import CategoriesService from "@/modules/categories/services/categories.service.js";
 
 const _handle = fn => async (req, reply) => {
   try   { return await fn(req, reply); }
@@ -45,14 +45,22 @@ export const saveCategories = _handle(async (req, reply) => {
   if (!Array.isArray(categories) || categories.length === 0)
     throw createError(400, "At least one category is required");
 
-  const invalid = categories.filter((c) => !CATEGORY_SLUGS.includes(c));
+  const resolved = [];
+  const invalid = [];
+  for (const raw of categories) {
+    const slug = await CategoriesService.resolveActiveSlug(raw);
+    if (!slug) invalid.push(raw);
+    else resolved.push(slug);
+  }
   if (invalid.length > 0)
-    throw createError(400, `Unknown categories: ${invalid.join(", ")}`);
+    throw createError(400, `Catégorie(s) invalide(s) ou inactive(s) : ${invalid.join(", ")}`);
+
+  const resolvedCategories = [...new Set(resolved)];
 
   // Persist categories and clear first-login flag on the user document
   await Users.updateOne(
     { _id: userId },
-    { $set: { categories, isFirstLogin: false } }
+    { $set: { categories: resolvedCategories, isFirstLogin: false } }
   );
 
   // Mark the onboarding record as completed
@@ -60,16 +68,16 @@ export const saveCategories = _handle(async (req, reply) => {
   if (onboarding) {
     await Onboardings.updateOne(
       { _id: onboarding._id },
-      { $set: { completed: true, status: "completed", categories } }
+      { $set: { completed: true, status: "completed", categories: resolvedCategories } }
     );
   } else {
     await Onboardings.insertOne({
       user_id: userId,
       status: "completed",
       completed: true,
-      categories,
+      categories: resolvedCategories,
     });
   }
 
-  reply.code(200).send({ message: "Onboarding completed", categories });
+  reply.code(200).send({ message: "Onboarding completed", categories: resolvedCategories });
 });

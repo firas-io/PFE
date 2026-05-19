@@ -50,6 +50,19 @@ const getBySlug = _h(async (req, reply) => {
   reply.code(404).send({ code: "CAT-003", message: "Catégorie introuvable" });
 });
 
+// GET /categories/available-for-user — active categories NOT yet in user.categories
+const availableForUser = _h(async (req, reply) => {
+  const [dbCategories, user] = await Promise.all([
+    CategoriesService.getActive(),
+    Users.findById(req.user.id),
+  ]);
+  const selectedLower = new Set((user?.categories ?? []).map((s) => String(s).toLowerCase()));
+  const available = dbCategories.filter(
+    (c) => c.slug !== "autre" && !selectedLower.has(String(c.slug).toLowerCase())
+  );
+  reply.send(available);
+});
+
 // GET /admin/categories — all (including inactive) for admin panel
 const listAll = _h(async (_req, reply) => {
   reply.send(await CategoriesService.getAll());
@@ -71,5 +84,5 @@ const remove = _h(async (req, reply) => {
   reply.code(httpStatus.NO_CONTENT).send(null);
 });
 
-const CategoriesController = { list, getBySlug, listAll, create, update, remove };
+const CategoriesController = { list, getBySlug, availableForUser, listAll, create, update, remove };
 export default CategoriesController;

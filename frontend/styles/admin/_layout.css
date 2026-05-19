@@ -572,21 +572,24 @@
   .admin-sidebar,
   .user-sidebar {
     position: fixed;
-    top: 0;
+    top: 60px;
     left: 0;
-    right: auto;
-    bottom: 0;
-    height: 100dvh;
-    width: min(86vw, var(--hf-sidebar-w));
-    transform: translate3d(-100%, 0, 0);
+    right: 0;
+    bottom: auto;
+    height: auto;
+    width: 100%;
+    max-height: calc(100dvh - 60px);
+    overflow-y: auto;
+    transform: translateY(calc(-100% - 70px));
     will-change: transform;
     box-shadow: none;
+    border-radius: 0 0 14px 14px;
   }
 
   .admin-shell:not(.admin-shell--sidebar-collapsed) .admin-sidebar,
   .user-shell:not(.user-shell--sidebar-collapsed) .user-sidebar {
-    transform: translate3d(0, 0, 0);
-    box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+    transform: translateY(0);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.18);
   }
 
   .mobile-bottom-nav { display: block; }

@@ -19,23 +19,87 @@ function _weekBounds() {
   return { weekStart, weekEnd };
 }
 
-function _dailyProgress(weekLogs, weekStart) {
+function _resolvePeriod(period = "week", dateFrom, dateTo) {
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  if (period === "custom" && dateFrom && dateTo) {
+    return {
+      periodStart: _startOfDay(new Date(dateFrom)),
+      periodEnd:   _endOfDay(new Date(dateTo)),
+      period:      "custom",
+    };
+  }
+  if (period === "day") {
+    return { periodStart: _startOfDay(now), periodEnd: _endOfDay(now), period: "day" };
+  }
+  if (period === "month") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1);
+    const end   = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    return { periodStart: _startOfDay(start), periodEnd: _endOfDay(end), period: "month" };
+  }
+  if (period === "year") {
+    const start = new Date(now.getFullYear(), 0, 1);
+    const end   = new Date(now.getFullYear(), 11, 31);
+    return { periodStart: _startOfDay(start), periodEnd: _endOfDay(end), period: "year" };
+  }
+  if (dateFrom && dateTo) {
+    return {
+      periodStart: _startOfDay(new Date(dateFrom)),
+      periodEnd:   _endOfDay(new Date(dateTo)),
+      period:      period || "week",
+    };
+  }
+  const { weekStart, weekEnd } = _weekBounds();
+  return { periodStart: weekStart, periodEnd: weekEnd, period: "week" };
+}
+
+function _buildPeriodProgress(logs, periodStart, periodEnd, period) {
+  if (period === "year") {
+    const progress = [];
+    const year = periodStart.getFullYear();
+    for (let m = 0; m < 12; m++) {
+      const start     = _startOfDay(new Date(year, m, 1));
+      const end       = _endOfDay(new Date(year, m + 1, 0));
+      const monthLogs = logs.filter(l => l.date >= start && l.date <= end);
+      const complete  = monthLogs.filter(l => l.statut === "completee").length;
+      progress.push({
+        date:      start.toISOString(),
+        label:     start.toLocaleDateString("fr-FR", { month: "short" }),
+        total:     monthLogs.length,
+        completed: complete,
+        rate:      monthLogs.length ? Math.round((complete / monthLogs.length) * 100) : 0,
+      });
+    }
+    return progress;
+  }
+
   const progress = [];
-  for (let i = 0; i < 7; i++) {
-    const day    = new Date(weekStart);
-    day.setDate(weekStart.getDate() + i);
-    const dayEnd   = _endOfDay(day);
-    const dayLogs  = weekLogs.filter(l => l.date >= day && l.date <= dayEnd);
+  const cursor   = new Date(periodStart);
+  const maxDays  = period === "month" ? 31 : 90;
+
+  while (cursor <= periodEnd && progress.length < maxDays) {
+    const dayStart = _startOfDay(cursor);
+    const dayEnd   = _endOfDay(cursor);
+    const dayLogs  = logs.filter(l => l.date >= dayStart && l.date <= dayEnd);
     const complete = dayLogs.filter(l => l.statut === "completee").length;
     progress.push({
-      date:      day.toISOString(),
-      label:     day.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" }),
+      date:      dayStart.toISOString(),
+      label:     dayStart.toLocaleDateString("fr-FR", { weekday: "short", day: "2-digit", month: "2-digit" }),
       total:     dayLogs.length,
       completed: complete,
       rate:      dayLogs.length ? Math.round((complete / dayLogs.length) * 100) : 0,
     });
+    cursor.setDate(cursor.getDate() + 1);
   }
   return progress;
+}
+
+function _dailyProgress(weekLogs, weekStart) {
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekStart.getDate() + 6);
+  weekEnd.setHours(23, 59, 59, 999);
+  return _buildPeriodProgress(weekLogs, weekStart, weekEnd, "week");
 }
 
 function _weekDays(weekStart) {
@@ -53,24 +117,24 @@ function _weekDays(weekStart) {
 }
 
 class WeeklyStatsService {
-  // ── Admin: platform-wide current week (Mon-Sun) ──────────────────────────────
-  static async getAdminStats() {
-    const { weekStart, weekEnd } = _weekBounds();
+  // ── Admin: platform-wide stats for selected period ───────────────────────────
+  static async getAdminStats({ period, dateFrom, dateTo } = {}) {
+    const { periodStart, periodEnd, period: resolvedPeriod } = _resolvePeriod(period, dateFrom, dateTo);
 
-    const [totalUsers, weekLogs, allHabits] = await Promise.all([
+    const [totalUsers, periodLogs, allHabits] = await Promise.all([
       Users.count({ isActive: true, is_system: { $ne: true } }),
       HabitLogs.find(
-        { date: { $gte: weekStart, $lte: weekEnd } },
+        { date: { $gte: periodStart, $lte: periodEnd } },
         { projection: { user_id: 1, habit_id: 1, statut: 1, date: 1 } }
       ),
       Habits.find({}, { projection: { _id: 1, categorie: 1, createdAt: 1 } }),
     ]);
 
     const totalHabits        = allHabits.length;
-    const newHabits          = allHabits.filter(h => h.createdAt >= weekStart && h.createdAt <= weekEnd).length;
-    const completedLogs      = weekLogs.filter(l => l.statut === "completee").length;
-    const completionRate     = weekLogs.length ? Math.round((completedLogs / weekLogs.length) * 100) : 0;
-    const activeUserIds      = new Set(weekLogs.map(l => l.user_id));
+    const newHabits          = allHabits.filter(h => h.createdAt >= periodStart && h.createdAt <= periodEnd).length;
+    const completedLogs      = periodLogs.filter(l => l.statut === "completee").length;
+    const completionRate     = periodLogs.length ? Math.round((completedLogs / periodLogs.length) * 100) : 0;
+    const activeUserIds      = new Set(periodLogs.map(l => l.user_id));
 
     const catCount = {};
     for (const h of allHabits) {
@@ -83,33 +147,33 @@ class WeeklyStatsService {
       .slice(0, 5);
 
     return {
-      period:                 "current_week",
-      week_start:             weekStart.toISOString(),
-      week_end:               weekEnd.toISOString(),
+      period:                 resolvedPeriod,
+      week_start:             periodStart.toISOString(),
+      week_end:               periodEnd.toISOString(),
       total_users:            totalUsers,
       active_users_this_week: activeUserIds.size,
       total_habits:           totalHabits,
       new_habits_this_week:   newHabits,
-      total_logs_this_week:   weekLogs.length,
+      total_logs_this_week:   periodLogs.length,
       completed_this_week:    completedLogs,
       completion_rate:        completionRate,
-      daily_progress:         _dailyProgress(weekLogs, weekStart),
+      daily_progress:         _buildPeriodProgress(periodLogs, periodStart, periodEnd, resolvedPeriod),
       top_categories:         topCategories,
     };
   }
 
-  // ── Manager: team-only current week (Mon-Sun) ────────────────────────────────
-  static async getManagerStats(managerId) {
+  // ── Manager: team stats for selected period ──────────────────────────────────
+  static async getManagerStats(managerId, { period, dateFrom, dateTo } = {}) {
     const teamUsers = await Users.find({ manager_id: managerId, anonymized: { $ne: true } });
     const teamIds   = teamUsers.map(u => u._id);
-    const { weekStart, weekEnd } = _weekBounds();
+    const { periodStart, periodEnd, period: resolvedPeriod } = _resolvePeriod(period, dateFrom, dateTo);
 
     if (teamIds.length === 0) {
       return {
-        period: "current_week", team_size: 0, active_members: 0,
+        period: resolvedPeriod, team_size: 0, active_members: 0,
         total_habits: 0, total_logs_this_week: 0, completed_this_week: 0,
         completion_rate: 0, most_active_user: null,
-        daily_progress: _dailyProgress([], weekStart),
+        daily_progress: _buildPeriodProgress([], periodStart, periodEnd, resolvedPeriod),
         members_breakdown: [],
       };
     }
@@ -117,7 +181,7 @@ class WeeklyStatsService {
     const [teamHabits, weekLogs] = await Promise.all([
       Habits.find({ user_id: { $in: teamIds } }),
       HabitLogs.find(
-        { user_id: { $in: teamIds }, date: { $gte: weekStart, $lte: weekEnd } },
+        { user_id: { $in: teamIds }, date: { $gte: periodStart, $lte: periodEnd } },
         { projection: { user_id: 1, habit_id: 1, statut: 1, date: 1 } }
       ),
     ]);
@@ -164,9 +228,9 @@ class WeeklyStatsService {
     }).sort((a, b) => b.completion_rate - a.completion_rate);
 
     return {
-      period:                "current_week",
-      week_start:            weekStart.toISOString(),
-      week_end:              weekEnd.toISOString(),
+      period:                resolvedPeriod,
+      week_start:            periodStart.toISOString(),
+      week_end:              periodEnd.toISOString(),
       team_size:             teamUsers.length,
       active_members:        teamUsers.filter(u => u.isActive !== false).length,
       total_habits:          teamHabits.length,
@@ -174,7 +238,7 @@ class WeeklyStatsService {
       completed_this_week:   completedLogs,
       completion_rate:       completionRate,
       most_active_user:      mostActiveUser,
-      daily_progress:        _dailyProgress(weekLogs, weekStart),
+      daily_progress:        _buildPeriodProgress(weekLogs, periodStart, periodEnd, resolvedPeriod),
       members_breakdown:     membersBreakdown,
     };
   }

@@ -18,7 +18,6 @@ export interface User {
   role: Role | string;
   departement?: string;
   isActive: boolean;
-  dernier_login?: string;
   createdAt: string;
   updatedAt: string;
 }

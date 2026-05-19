@@ -1,6 +1,6 @@
 'use client';
 import React from 'react';
-import { Plus, Search, SlidersHorizontal } from 'lucide-react';
+import { Search, SlidersHorizontal } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { STATUS_FILTERS, SORT_OPTIONS } from '../../_constants';
 
@@ -8,7 +8,6 @@ export const HabitHeader = ({
   statusFilter, onStatusFilter,
   search, onSearch,
   sortBy, onSortBy,
-  onAdd,
   userCategoryMeta = [],
   categoryFilter = 'all',
   onCategoryFilter,
@@ -20,14 +19,6 @@ export const HabitHeader = ({
         <h2 className="text-base fw-bold text-body">Mes habitudes</h2>
         <p className="text-xs text-muted mt-0.5">Filtrer, trier, modifier ou archiver vos habitudes.</p>
       </div>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="d-inline-flex align-items-center gap-2 rounded-4 bg-gradient-primary px-4 py-2 text-sm fw-semibold text-white shadow-glow transition-smooth hover:opacity-90 flex-shrink-0"
-      >
-        <Plus className="h-4 w-4" />
-        Nouvelle habitude
-      </button>
     </div>
 
     {/* Category tabs (only rendered when user has onboarding categories) */}

@@ -96,26 +96,25 @@ export function UserWeeklyStats() {
       label: 'HABITUDES ACTIVES',
       value: String(stats.active_habits),
       sub:   `${stats.total_habits} au total (actives + pausées)`,
-      color: '#4338CA', icon: '📋',
+      color: '#4338CA',
     },
     {
       label: 'COMPLÉTÉES CETTE SEMAINE',
       value: String(stats.completed_this_week),
       sub:   `sur ${stats.total_logs_this_week} entrées enregistrées`,
-      color: '#059669', icon: '✅',
+      color: '#059669',
     },
     {
       label: 'TAUX DE COMPLÉTION',
       value: `${stats.completion_rate}%`,
       sub:   rateLabel(stats.completion_rate) + ' — semaine en cours (lundi-dimanche)',
       color: rateColor(stats.completion_rate),
-      icon:  stats.completion_rate >= 50 ? '📈' : '📉',
     },
     {
       label: 'MEILLEURE HABITUDE',
       value: bestHabit ? `${bestHabit.rate}%` : '—',
       sub:   bestHabit ? bestHabit.nom : 'Aucune activité cette semaine',
-      color: '#7C3AED', icon: '🏆',
+      color: '#7C3AED',
     },
   ] : [];
 
@@ -151,7 +150,6 @@ export function UserWeeklyStats() {
 
       {!loading && stats && stats.total_habits === 0 && (
         <div style={{ ...CARD, textAlign: 'center', padding: '48px 20px' }}>
-          <p style={{ fontSize: 32, margin: '0 0 12px' }}>📋</p>
           <p style={{ fontSize: 16, fontWeight: 700, color: '#1E1B4B', margin: '0 0 6px' }}>Aucune habitude enregistrée</p>
           <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Créez vos premières habitudes pour voir vos statistiques ici.</p>
         </div>
@@ -171,7 +169,6 @@ export function UserWeeklyStats() {
               >
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
                   <p style={{ fontSize: 10, fontWeight: 700, color: '#64748B', letterSpacing: '0.08em', textTransform: 'uppercase', margin: 0 }}>{k.label}</p>
-                  <span style={{ fontSize: 16 }}>{k.icon}</span>
                 </div>
                 <p style={{ fontSize: 34, fontWeight: 900, color: k.color, margin: 0, lineHeight: 1, letterSpacing: '-1px' }}>{k.value}</p>
                 <p style={{ fontSize: 12, color: '#64748B', marginTop: 4 }}>{k.sub}</p>
@@ -278,23 +275,22 @@ export function UserWeeklyStats() {
             }}>
               <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
               <div style={{ position: 'absolute', bottom: -30, left: -10, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }}/>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-                <span style={{ fontSize: 14 }}>✨</span>
+              <div style={{ marginBottom: 14 }}>
                 <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>
                   BILAN PERSONNEL — LUNDI À DIMANCHE
                 </span>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 11, position: 'relative' }}>
                 {[
-                  { label: 'Habitudes actives',   value: String(stats.active_habits),         icon: '📋' },
-                  { label: 'Logs enregistrés',     value: String(stats.total_logs_this_week),  icon: '📊' },
-                  { label: 'Complétées',           value: String(stats.completed_this_week),   icon: '✅' },
-                  { label: 'Taux de complétion',   value: `${stats.completion_rate}%`,         icon: stats.completion_rate >= 50 ? '📈' : '📉' },
-                  ...(bestHabit ? [{ label: 'Top habitude', value: bestHabit.nom.length > 14 ? bestHabit.nom.slice(0, 14) + '…' : bestHabit.nom, icon: '🏆' }] : []),
-                  ...(strugglingHabits.length > 0 ? [{ label: 'À améliorer', value: `${strugglingHabits.length} hab.`, icon: '⚠️' }] : [{ label: 'Tout est en ordre', value: '🎉', icon: '✓' }]),
+                  { label: 'Habitudes actives',   value: String(stats.active_habits) },
+                  { label: 'Logs enregistrés',     value: String(stats.total_logs_this_week) },
+                  { label: 'Complétées',           value: String(stats.completed_this_week) },
+                  { label: 'Taux de complétion',   value: `${stats.completion_rate}%` },
+                  ...(bestHabit ? [{ label: 'Top habitude', value: bestHabit.nom.length > 14 ? bestHabit.nom.slice(0, 14) + '…' : bestHabit.nom }] : []),
+                  ...(strugglingHabits.length > 0 ? [{ label: 'À améliorer', value: `${strugglingHabits.length} hab.` }] : [{ label: 'Tout est en ordre', value: 'OK' }]),
                 ].map(item => (
                   <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.icon} {item.label}</span>
+                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.label}</span>
                     <span style={{ fontSize: 14, fontWeight: 800 }}>{item.value}</span>
                   </div>
                 ))}
@@ -305,8 +301,8 @@ export function UserWeeklyStats() {
           {/* ── Struggling habits ── */}
           {strugglingHabits.length > 0 && (
             <div style={CARD}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>⚠️</span> Habitudes à améliorer
+              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 14px' }}>
+                Habitudes à améliorer
               </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {strugglingHabits.slice(0, 4).map(h => {

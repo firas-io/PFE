@@ -8,6 +8,9 @@ import { setupCategories }     from "@/fixtures/setup-categories.js";
 import { migrateUsersEnglishFields } from "@/fixtures/migrate-users-english-fields.js";
 import { migrateUserIdsToUuid }          from "@/fixtures/migrate-user-ids-to-uuid.js";
 import { migrateLegacyEntityIdsToUuid } from "@/fixtures/migrate-legacy-entity-ids-to-uuid.js";
+import { migrateHabitsGlobalFields }    from "@/fixtures/migrate-habits-global-fields.js";
+import { migrateTicketsTypeField }      from "@/fixtures/migrate-tickets-type-field.js";
+import { migrateRolesPermissions }      from "@/fixtures/migrate-roles-permissions.js";
 import dbPlugin   from "@/plugins/db.plugin.js";
 import authPlugin from "@/plugins/auth.plugin.js";
 import authRoutes          from "@/modules/auth/index.js";
@@ -57,8 +60,11 @@ export async function buildApp() {
       const raw = typeof body === "string" ? body.trim() : "";
       if (!raw) return done(null, {});
       return done(null, JSON.parse(raw));
-    } catch (err) {
-      return done(err);
+    } catch {
+      const parseErr = new Error("Invalid JSON body");
+      parseErr.statusCode = 400;
+      parseErr.code = "INVALID_JSON";
+      return done(parseErr);
     }
   });
 
@@ -121,6 +127,9 @@ export async function buildApp() {
     await migrateUsersEnglishFields();
     await migrateUserIdsToUuid();
     await migrateLegacyEntityIdsToUuid();
+    await migrateHabitsGlobalFields();
+    await migrateTicketsTypeField();
+    await migrateRolesPermissions();
     await setupAdmin(fastify);
     await setupCategories();
     await setupHabitTemplates(fastify);

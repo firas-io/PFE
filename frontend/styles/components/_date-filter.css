@@ -1,0 +1,67 @@
+/* Segmented date period filter (Ce jour / Cette semaine / …) */
+.hf-date-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+
+.hf-date-filter__btn {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid #E5E7EB;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  line-height: 1.2;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.hf-date-filter__btn:hover:not(.hf-date-filter__btn--active) {
+  border-color: #C7D2FE;
+  background: #F8FAFC;
+}
+
+.hf-date-filter__btn--active {
+  background: #4338CA;
+  border-color: #4338CA;
+  color: #fff;
+}
+
+.hf-date-filter__custom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.hf-date-filter__custom input[type="date"] {
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid #E5E7EB;
+  font-size: 13px;
+  font-family: inherit;
+  color: #374151;
+  background: #fff;
+}
+
+.hf-date-filter__custom-ok {
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: #4338CA;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.hf-date-filter__custom-ok:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

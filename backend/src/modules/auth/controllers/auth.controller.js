@@ -9,7 +9,6 @@ async function sendLoginSuccess(reply, { user, role, onboardingPending, isFirstL
   const accessToken  = await reply.jwtSign({ id: uid, email: user.email, role: role.nom, permissions: role.permissions || [] });
   const refreshToken = await AuthService.createRefreshToken(uid);
   reply.send({
-    token:        accessToken,
     accessToken,
     refreshToken,
     onboardingPending,

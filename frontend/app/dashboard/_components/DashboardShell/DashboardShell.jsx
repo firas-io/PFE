@@ -3,44 +3,73 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
+  IconCalendarOff,
   IconCalendarStats,
+  IconChartBar,
   IconCheck,
   IconHome,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
+  IconListDetails,
   IconLogout,
-  IconMoon,
-  IconSun,
   IconMessageCircle,
+  IconMoon,
+  IconNotes,
+  IconProgress,
   IconReportAnalytics,
-  IconUser,
+  IconShieldCheck,
   IconShieldLock,
-  IconBell,
-  IconSearch,
+  IconSun,
+  IconTag,
+  IconTicket,
+  IconUser,
+  IconUsers,
+  IconUsersGroup,
   IconSettings,
-  IconMenu2,
-  IconX,
 } from '@tabler/icons-react';
-import { clearAuth, getRefreshToken, getUser } from '@/lib/auth';
+import { clearAuth, getRefreshToken, getUser, setUser as storeUser } from '@/lib/auth';
 import { userFirstName, userLastName } from '@/lib/userDisplay';
-import { canAccessAdminShell } from '@/src/utils/permissions';
-import { API_BASE } from '@/lib/api';
+import {
+  canAccessAdminShell,
+  canViewHabits,
+  canManageHabits,
+  canViewStats,
+  canViewLogs,
+  canViewProgress,
+  canManageManagersCrud,
+  canViewUsers,
+  canManageCategoryTickets,
+  canManageOffDays,
+  canViewOffDays,
+  canViewRoles,
+  canViewCategories,
+} from '@/src/utils/permissions';
+import { apiFetch, API_BASE } from '@/lib/api';
 
-const NAV_LINKS = [
-  { href: '/dashboard/home',      icon: IconHome,              label: 'Tableau de bord', exact: true },
-  { href: '/dashboard/habits',    icon: IconCheck,             label: 'Habitudes' },
-  { href: '/dashboard/stats',     icon: IconReportAnalytics,   label: 'Statistiques' },
-  { href: '/dashboard/calendar',  icon: IconCalendarStats,     label: 'Calendrier' },
-  { href: '/dashboard/progress',  icon: IconUser,              label: 'Mon avancement' },
-  { href: '/dashboard/tickets',   icon: IconMessageCircle,     label: 'Tickets' },
+const ALL_NAV_LINKS = [
+  { href: '/dashboard/home',      icon: IconHome,              label: 'Tableau de bord', exact: true,  always: true  },
+  { href: '/dashboard/habits',    icon: IconCheck,             label: 'Habitudes',       always: false, permFn: canViewHabits },
+  { href: '/dashboard/stats',     icon: IconReportAnalytics,   label: 'Statistiques',    always: false, permFn: canViewStats  },
+  { href: '/dashboard/calendar',  icon: IconCalendarStats,     label: 'Calendrier',      always: false, permFn: (u) => canViewLogs(u) || canViewProgress(u) },
+  { href: '/dashboard/progress',  icon: IconUser,              label: 'Mon avancement',  always: false, permFn: canViewProgress },
+  { href: '/dashboard/categories', icon: IconTag,               label: 'Mes Catégories',  always: true  },
+  { href: '/dashboard/tickets',   icon: IconMessageCircle,     label: 'Tickets',         always: true  },
+  { href: '/dashboard/off-days',  icon: IconCalendarOff,       label: 'Jours off',       always: false, permFn: canViewOffDays },
 ];
 
-const MOBILE_NAV = [
-  { href: '/dashboard/home',      label: 'Today',     icon: IconHome },
-  { href: '/dashboard/habits',    label: 'Habitudes', icon: IconCheck },
-  { href: '/dashboard/calendar',  label: 'Calendrier',icon: IconCalendarStats },
-  { href: '/dashboard/progress',  label: 'Profil',    icon: IconUser },
-];
+function getNavLinks(user) {
+  return ALL_NAV_LINKS.filter((l) => l.always || (l.permFn && l.permFn(user)));
+}
+
+function getMobileNav(user) {
+  const mobile = [
+    { href: '/dashboard/home',     label: 'Today',     icon: IconHome,          always: true  },
+    { href: '/dashboard/habits',   label: 'Habitudes', icon: IconCheck,         always: false, permFn: canViewHabits    },
+    { href: '/dashboard/calendar', label: 'Calendrier',icon: IconCalendarStats, always: false, permFn: (u) => canViewLogs(u) || canViewProgress(u) },
+    { href: '/dashboard/progress', label: 'Profil',    icon: IconUser,          always: false, permFn: canViewProgress  },
+  ];
+  return mobile.filter((l) => l.always || (l.permFn && l.permFn(user)));
+}
 
 export const DashboardShell = ({ children }) => {
   const pathname  = usePathname();
@@ -49,15 +78,25 @@ export const DashboardShell = ({ children }) => {
   const [darkMode,    setDarkMode]    = useState(false);
   const [mounted,     setMounted]     = useState(false);
   const [user,        setUser]        = useState(null);
-  const [search,      setSearch]      = useState('');
+  const [showUserMenu, setShowUserMenu] = useState(false);
 
   useEffect(() => {
-    setUser(getUser());
+    const stored = getUser();
+    setUser(stored);
     const saved = window.localStorage.getItem('habitflow_dark_mode');
     if (saved === 'true') setDarkMode(true);
     setMounted(true);
-    // On mobile: sidebar closed by default
     if (window.innerWidth < 769) setSidebarOpen(false);
+
+    // Sync live permissions from DB on every shell mount
+    apiFetch('/profile')
+      .then((profile) => {
+        if (!profile?.permissions) return;
+        const updated = { ...stored, permissions: profile.permissions };
+        setUser(updated);
+        storeUser(updated);
+      })
+      .catch(() => {});
   }, []);
 
   const logout = async () => {
@@ -117,33 +156,193 @@ export const DashboardShell = ({ children }) => {
           </div>
         </div>
 
-        {/* Nav section */}
-        <div className="user-nav-section">Navigation</div>
-
-        <nav className="user-nav" aria-label="Navigation principale">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className={`user-nav-link${isActive(link) ? ' active' : ''}`}
-              onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}
-            >
-              <link.icon size={18} stroke={1.75}/>
-              <span>{link.label}</span>
+        {/* ── Nav: structure différente selon le rôle ── */}
+        {mounted && user?.role === 'manager' ? (
+          /* ── Sidebar Manager : identique à admin/layout.tsx ──────────── */
+          <nav className="user-nav" aria-label="Navigation manager">
+            {/* Vue d'ensemble */}
+            <div className="user-nav-section">Vue d&apos;ensemble</div>
+            <Link href="/admin" className={`user-nav-link${pathname === '/admin' ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconChartBar size={18} stroke={1.75}/>
+              <span>Tableau de bord</span>
             </Link>
-          ))}
 
-          {mounted && user && canAccessAdminShell(user) && (
-            <Link
-              href={user.role === 'manager' ? '/admin/my-users' : '/admin'}
-              className={`user-nav-link${pathname.startsWith('/admin') ? ' active' : ''}`}
-              onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}
-            >
-              <IconShieldLock size={18} stroke={1.75}/>
-              <span>{user.role === 'manager' ? 'Équipe' : 'Administration'}</span>
+            {/* Mon espace */}
+            <div className="user-nav-section" style={{ marginTop: 12 }}>Mon espace</div>
+            <Link href="/dashboard/home" className={`user-nav-link${pathname === '/dashboard/home' ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconHome size={18} stroke={1.75}/>
+              <span>Tableau de bord</span>
             </Link>
-          )}
-        </nav>
+            <Link href="/dashboard/habits" className={`user-nav-link${pathname.startsWith('/dashboard/habits') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconCheck size={18} stroke={1.75}/>
+              <span>Mes habitudes</span>
+            </Link>
+            <Link href="/dashboard/stats" className={`user-nav-link${pathname.startsWith('/dashboard/stats') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconReportAnalytics size={18} stroke={1.75}/>
+              <span>Mes statistiques</span>
+            </Link>
+            <Link href="/dashboard/calendar" className={`user-nav-link${pathname.startsWith('/dashboard/calendar') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconCalendarStats size={18} stroke={1.75}/>
+              <span>Mon calendrier</span>
+            </Link>
+            <Link href="/dashboard/progress" className={`user-nav-link${pathname.startsWith('/dashboard/progress') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconUser size={18} stroke={1.75}/>
+              <span>Ma progression</span>
+            </Link>
+            <Link href="/dashboard/categories" className={`user-nav-link${pathname.startsWith('/dashboard/categories') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconTag size={18} stroke={1.75}/>
+              <span>Mes catégories</span>
+            </Link>
+            <Link href="/dashboard/tickets" className={`user-nav-link${pathname.startsWith('/dashboard/tickets') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconMessageCircle size={18} stroke={1.75}/>
+              <span>Mes tickets</span>
+            </Link>
+
+            {/* Mon équipe */}
+            <div className="user-nav-section" style={{ marginTop: 12 }}>Mon équipe</div>
+            <Link href="/admin/my-users" className={`user-nav-link${pathname.startsWith('/admin/my-users') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconUsers size={18} stroke={1.75}/>
+              <span>Mon équipe</span>
+            </Link>
+            <Link href="/admin/notes" className={`user-nav-link${pathname.startsWith('/admin/notes') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconNotes size={18} stroke={1.75}/>
+              <span>Notes équipe</span>
+            </Link>
+            <Link href="/admin/off-days" className={`user-nav-link${pathname.startsWith('/admin/off-days') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconCalendarOff size={18} stroke={1.75}/>
+              <span>Jours off</span>
+            </Link>
+
+            {/* Administration (par permission) */}
+            {(canManageManagersCrud(user) || canViewUsers(user) || canViewHabits(user) || canViewCategories(user) || canViewLogs(user) || canManageCategoryTickets(user) || canViewStats(user) || canViewRoles(user)) && (
+              <div className="user-nav-section" style={{ marginTop: 12 }}>Administration</div>
+            )}
+            {canManageManagersCrud(user) && (
+              <Link href="/admin/managers" className={`user-nav-link${pathname.startsWith('/admin/managers') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconUsersGroup size={18} stroke={1.75}/>
+                <span>Gestion des managers</span>
+              </Link>
+            )}
+            {canViewUsers(user) && (
+              <Link href="/admin/users" className={`user-nav-link${pathname.startsWith('/admin/users') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconUsers size={18} stroke={1.75}/>
+                <span>Utilisateurs</span>
+              </Link>
+            )}
+            {(canViewHabits(user) || canManageHabits(user)) && (
+              <Link href="/admin/habits" className={`user-nav-link${pathname.startsWith('/admin/habits') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconProgress size={18} stroke={1.75}/>
+                <span>Habitudes globales</span>
+              </Link>
+            )}
+            {canViewCategories(user) && (
+              <Link href="/admin/categories" className={`user-nav-link${pathname.startsWith('/admin/categories') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconTag size={18} stroke={1.75}/>
+                <span>Catégories</span>
+              </Link>
+            )}
+            {canViewLogs(user) && (
+              <Link href="/admin/logs" className={`user-nav-link${pathname.startsWith('/admin/logs') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconListDetails size={18} stroke={1.75}/>
+                <span>Logs</span>
+              </Link>
+            )}
+            {canManageCategoryTickets(user) && (
+              <Link href="/admin/tickets" className={`user-nav-link${pathname.startsWith('/admin/tickets') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconTicket size={18} stroke={1.75}/>
+                <span>Tickets</span>
+              </Link>
+            )}
+            {canViewStats(user) && (
+              <Link href="/admin/stats" className={`user-nav-link${pathname.startsWith('/admin/stats') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconChartBar size={18} stroke={1.75}/>
+                <span>Statistiques admin</span>
+              </Link>
+            )}
+            {canViewRoles(user) && (
+              <Link href="/admin/roles" className={`user-nav-link${pathname.startsWith('/admin/roles') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconShieldCheck size={18} stroke={1.75}/>
+                <span>Permissions rôles</span>
+              </Link>
+            )}
+          </nav>
+        ) : mounted && user?.role === 'admin' ? (
+          /* ── Sidebar Admin : identique à admin/layout.tsx ─────────────── */
+          <nav className="user-nav" aria-label="Navigation admin">
+            <div className="user-nav-section">Vue d&apos;ensemble</div>
+            <Link href="/admin" className={`user-nav-link${pathname === '/admin' ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+              <IconChartBar size={18} stroke={1.75}/>
+              <span>Tableau de bord</span>
+            </Link>
+
+            {canManageManagersCrud(user) && (
+              <Link href="/admin/managers-users" className={`user-nav-link${pathname.startsWith('/admin/managers-users') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconUsersGroup size={18} stroke={1.75}/>
+                <span>Managers &amp; Utilisateurs</span>
+              </Link>
+            )}
+            {(canViewHabits(user) || canManageHabits(user)) && (
+              <Link href="/admin/habits" className={`user-nav-link${pathname.startsWith('/admin/habits') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconProgress size={18} stroke={1.75}/>
+                <span>Habitudes</span>
+              </Link>
+            )}
+            {canViewCategories(user) && (
+              <Link href="/admin/categories" className={`user-nav-link${pathname.startsWith('/admin/categories') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconTag size={18} stroke={1.75}/>
+                <span>Catégories</span>
+              </Link>
+            )}
+            {canViewLogs(user) && (
+              <Link href="/admin/logs" className={`user-nav-link${pathname.startsWith('/admin/logs') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconListDetails size={18} stroke={1.75}/>
+                <span>Logs</span>
+              </Link>
+            )}
+            {canManageCategoryTickets(user) && (
+              <Link href="/admin/tickets" className={`user-nav-link${pathname.startsWith('/admin/tickets') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconTicket size={18} stroke={1.75}/>
+                <span>Tickets</span>
+              </Link>
+            )}
+            {canManageOffDays(user) && (
+              <Link href="/admin/off-days" className={`user-nav-link${pathname.startsWith('/admin/off-days') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconCalendarOff size={18} stroke={1.75}/>
+                <span>Jours off</span>
+              </Link>
+            )}
+            {canViewStats(user) && (
+              <Link href="/admin/stats" className={`user-nav-link${pathname.startsWith('/admin/stats') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconReportAnalytics size={18} stroke={1.75}/>
+                <span>Statistiques</span>
+              </Link>
+            )}
+            {canViewRoles(user) && (
+              <Link href="/admin/roles" className={`user-nav-link${pathname.startsWith('/admin/roles') ? ' active' : ''}`} onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}>
+                <IconShieldCheck size={18} stroke={1.75}/>
+                <span>Permissions rôles</span>
+              </Link>
+            )}
+          </nav>
+        ) : (
+          /* ── Sidebar Utilisateur : liens filtrés par permissions ──────── */
+          <>
+            <div className="user-nav-section">Navigation</div>
+            <nav className="user-nav" aria-label="Navigation principale">
+              {getNavLinks(user).map((link) => (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`user-nav-link${isActive(link) ? ' active' : ''}`}
+                  onClick={() => { if (window.innerWidth < 769) setSidebarOpen(false); }}
+                >
+                  <link.icon size={18} stroke={1.75}/>
+                  <span>{link.label}</span>
+                </Link>
+              ))}
+            </nav>
+          </>
+        )}
 
         {/* Sidebar footer */}
         <div className="user-sidebar-footer">
@@ -151,15 +350,6 @@ export const DashboardShell = ({ children }) => {
             <IconSettings size={18} stroke={1.75}/>
             <span>Paramètres</span>
           </Link>
-          <button
-            type="button"
-            className="user-nav-link"
-            onClick={logout}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', width: '100%', textAlign: 'left', color: 'var(--hf-text-muted)' }}
-          >
-            <IconLogout size={18} stroke={1.75}/>
-            <span>Déconnexion</span>
-          </button>
         </div>
       </aside>
 
@@ -169,7 +359,12 @@ export const DashboardShell = ({ children }) => {
           onClick={() => setSidebarOpen(false)}
           style={{
             display: 'none',
-            position: 'fixed', inset: 0, zIndex: 999,
+            position: 'fixed',
+            top: 60,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 999,
             background: 'rgba(0,0,0,0.3)',
           }}
           className="sidebar-overlay"
@@ -193,17 +388,6 @@ export const DashboardShell = ({ children }) => {
                 ? <IconLayoutSidebarLeftCollapse size={20} stroke={1.75}/>
                 : <IconLayoutSidebarLeftExpand  size={20} stroke={1.75}/>}
             </button>
-
-            {/* Search */}
-            <div className="topbar-search">
-              <IconSearch size={15} stroke={1.75} style={{ flexShrink: 0 }}/>
-              <input
-                type="text"
-                placeholder="Rechercher des habitudes…"
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-              />
-            </div>
           </div>
 
           {/* Right side */}
@@ -220,35 +404,71 @@ export const DashboardShell = ({ children }) => {
               <span suppressHydrationWarning>{darkMode ? 'Clair' : 'Sombre'}</span>
             </button>
 
-            {/* Bell */}
-            <button type="button" className="topbar-icon-btn" title="Notifications">
-              <IconBell size={18} stroke={1.75}/>
-            </button>
-
             {/* Avatar */}
-            <div className="user-avatar" suppressHydrationWarning title={displayName}>
-              {initials}
+            <div style={{ position: 'relative' }}>
+              <button
+                type="button"
+                className="user-avatar"
+                suppressHydrationWarning
+                onClick={() => setShowUserMenu((v) => !v)}
+                aria-label="Menu utilisateur"
+                style={{ cursor: 'pointer', border: 'none', padding: 0 }}
+                title={displayName}
+              >
+                {initials}
+              </button>
+              {showUserMenu && (
+                <>
+                  <div
+                    onClick={() => setShowUserMenu(false)}
+                    style={{ position: 'fixed', inset: 0, zIndex: 1099 }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    top: 'calc(100% + 8px)',
+                    right: 0,
+                    background: '#fff',
+                    border: '1px solid #E8E7F5',
+                    borderRadius: 12,
+                    boxShadow: '0 8px 24px rgba(67,56,202,0.10)',
+                    minWidth: 180,
+                    zIndex: 1100,
+                    overflow: 'hidden',
+                  }}>
+                    <div style={{ padding: '12px 16px', borderBottom: '1px solid #F0EFF9' }}>
+                      <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--hf-text)' }} suppressHydrationWarning>
+                        {displayName}
+                      </div>
+                      <div style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }} suppressHydrationWarning>
+                        {user?.role || 'Utilisateur'}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => { setShowUserMenu(false); logout(); }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 8,
+                        width: '100%',
+                        padding: '10px 16px',
+                        border: 'none',
+                        background: 'none',
+                        color: '#ef4444',
+                        fontSize: 13,
+                        fontWeight: 500,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                      }}
+                    >
+                      <IconLogout size={15} stroke={1.75} />
+                      Déconnexion
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
 
-            {/* Logout desktop */}
-            <button
-              type="button"
-              onClick={logout}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '7px 12px', borderRadius: 10,
-                border: '1px solid var(--hf-border)',
-                background: 'transparent', color: 'var(--hf-text-muted)',
-                fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                transition: 'background 0.15s',
-                fontFamily: 'inherit',
-              }}
-              onMouseEnter={e => e.currentTarget.style.background = '#FEF2F2'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-            >
-              <IconLogout size={14} stroke={1.75}/>
-              <span className="hide-mobile">Déconnexion</span>
-            </button>
           </div>
         </header>
 
@@ -261,7 +481,23 @@ export const DashboardShell = ({ children }) => {
       {/* ── Mobile Bottom Nav ────────────────────────────────── */}
       <nav className="mobile-bottom-nav" aria-label="Navigation mobile">
         <div className="mobile-bottom-nav-inner">
-          {MOBILE_NAV.map((link) => (
+          {(user?.role === 'manager'
+            ? [
+                { href: '/dashboard/home',   label: 'Bord',      icon: IconHome         },
+                { href: '/dashboard/habits', label: 'Habitudes', icon: IconCheck        },
+                { href: '/admin/my-users',   label: 'Équipe',    icon: IconUsers        },
+                { href: '/admin/off-days',   label: 'Jours off', icon: IconCalendarOff  },
+              ]
+            : user?.role === 'admin'
+            ? [
+                { href: '/admin',               label: 'Dashboard', icon: IconChartBar    },
+                ...(canManageManagersCrud(user) ? [{ href: '/admin/managers-users', label: 'Managers', icon: IconUsersGroup }] : []),
+                ...((canViewHabits(user) || canManageHabits(user)) ? [{ href: '/admin/habits', label: 'Habitudes', icon: IconProgress }] : []),
+                ...(canViewLogs(user) ? [{ href: '/admin/logs', label: 'Logs', icon: IconListDetails }] : []),
+                ...(canManageCategoryTickets(user) ? [{ href: '/admin/tickets', label: 'Tickets', icon: IconTicket }] : []),
+              ].slice(0, 5)
+            : getMobileNav(user)
+          ).map((link) => (
             <Link
               key={link.href}
               href={link.href}
@@ -278,7 +514,6 @@ export const DashboardShell = ({ children }) => {
         @media (max-width: 768px) {
           .sidebar-overlay { display: block !important; }
           .hide-mobile { display: none; }
-          .topbar-search { max-width: 160px; }
         }
       `}</style>
     </div>

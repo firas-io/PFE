@@ -7,7 +7,9 @@ import { useToast } from "@/components/Toast";
 
 interface Ticket {
   _id: string;
-  title: string;
+  title?: string;
+  requested_name?: string;
+  type?: string;
   description: string | null;
   status: "pending" | "in_review" | "done" | "rejected";
   admin_note?: string | null;
@@ -17,6 +19,7 @@ interface Ticket {
 }
 
 type FilterStatus = "all" | "pending" | "in_review" | "done" | "rejected";
+type ModalType = "categorie" | null;
 
 const STATUS_LABEL: Record<string, string> = {
   pending:   "En attente",
@@ -39,7 +42,7 @@ export default function Tickets() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterStatus>("all");
-  const [showForm, setShowForm] = useState(false);
+  const [activeModal, setActiveModal] = useState<ModalType>(null);
   const [submitting, setSubmitting] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -64,13 +67,21 @@ export default function Tickets() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
+    if (!description.trim()) {
+      setFormError("La description est requise.");
+      return;
+    }
     setSubmitting(true); setFormError(null);
     try {
       await apiFetch("/category-tickets", {
         method: "POST",
-        body: JSON.stringify({ title: title.trim(), description: description.trim() || undefined }),
+        body: JSON.stringify({
+          type:           "categorie",
+          requested_name: title.trim(),
+          description:    description.trim(),
+        }),
       });
-      setTitle(""); setDescription(""); setShowForm(false); load();
+      setTitle(""); setDescription(""); setActiveModal(null); load();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "Erreur lors de la création");
     } finally { setSubmitting(false); }
@@ -110,14 +121,14 @@ export default function Tickets() {
           <h1 className="tkt-title">Tickets</h1>
           <p className="tkt-subtitle">Demandes, bugs et retours</p>
         </div>
-        <button onClick={() => setShowForm(true)} className="tkt-btn-new">
+        <button onClick={() => { setActiveModal("categorie"); setFormError(null); }} className="tkt-btn-new">
           <Plus size={15} /> Nouveau ticket
         </button>
       </div>
 
-      {/* Create form */}
+      {/* Create category ticket form */}
       <AnimatePresence>
-        {showForm && (
+        {activeModal === "categorie" && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -125,7 +136,7 @@ export default function Tickets() {
             transition={{ duration: 0.18 }}
             className="tkt-form-card"
           >
-            <h2>Créer un ticket</h2>
+            <h2>Créer un ticket de catégorie</h2>
             <form onSubmit={handleCreate}>
               <div className="tkt-form-group">
                 <label className="tkt-form-label">Titre *</label>
@@ -138,22 +149,19 @@ export default function Tickets() {
                 />
               </div>
               <div className="tkt-form-group">
-                <label className="tkt-form-label">Description</label>
+                <label className="tkt-form-label">Description *</label>
                 <textarea
                   value={description}
                   onChange={e => setDescription(e.target.value)}
                   rows={3}
                   placeholder="Que se passe-t-il ?"
                   className="tkt-form-textarea"
+                  required
                 />
               </div>
               {formError && <p className="tkt-form-error">{formError}</p>}
               <div className="tkt-form-actions">
-                <button
-                  type="button"
-                  onClick={() => { setShowForm(false); setFormError(null); }}
-                  className="tkt-btn-cancel"
-                >
+                <button type="button" onClick={() => { setActiveModal(null); setFormError(null); }} className="tkt-btn-cancel">
                   Annuler
                 </button>
                 <button type="submit" disabled={submitting} className="tkt-btn-submit">
@@ -213,7 +221,7 @@ export default function Tickets() {
               <div className="tkt-row-main">
                 <span className="tkt-row-id">#{t._id.slice(-6).toUpperCase()}</span>
                 <div className="tkt-row-body">
-                  <p className="tkt-row-title">{t.title}</p>
+                  <p className="tkt-row-title">{t.requested_name || t.title}</p>
                   {t.description && <p className="tkt-row-desc">{t.description}</p>}
                 </div>
                 <div className="tkt-row-meta">

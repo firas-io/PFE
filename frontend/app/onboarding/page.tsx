@@ -283,17 +283,6 @@ export default function OnboardingPage() {
         <div style={{ display: 'flex', gap: 12, maxWidth: 560, margin: '0 auto', width: '100%' }}>
           <button
             type="button"
-            onClick={() => router.push('/dashboard/home')}
-            style={{
-              padding: '13px 20px', borderRadius: 12, border: 'none',
-              background: 'transparent', color: '#64748B', fontSize: 14, fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
-            Ignorer
-          </button>
-          <button
-            type="button"
             onClick={handleSubmit}
             disabled={selected.size === 0 || submitting}
             style={{

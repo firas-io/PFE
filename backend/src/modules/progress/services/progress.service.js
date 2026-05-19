@@ -8,7 +8,7 @@ function _startOfDay(date) { const d = new Date(date); d.setHours(0, 0, 0, 0);  
 function _endOfDay(date)   { const d = new Date(date); d.setHours(23, 59, 59, 999);      return d; }
 function _startOfWeekMonday(date) {
   const d = _startOfDay(date);
-  const day = d.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  const day = d.getDay();
   const diffToMonday = day === 0 ? 6 : day - 1;
   d.setDate(d.getDate() - diffToMonday);
   return d;
@@ -27,6 +27,14 @@ function _isHabitScheduledForDate(habit, targetDate) {
     return datesSpecifiques.some(d => _dayKey(new Date(d)) === targetKey);
   }
   return true;
+}
+
+// Resolve dateFrom / dateTo from optional filter params.
+// Returns { rangeStart: Date, rangeEnd: Date }.
+function _resolveRange(dateFrom, dateTo) {
+  const rangeStart = dateFrom ? _startOfDay(new Date(dateFrom)) : null;
+  const rangeEnd   = dateTo   ? _endOfDay(new Date(dateTo))     : null;
+  return { rangeStart, rangeEnd };
 }
 
 async function _fetchHabitsAndLogs(userId, logsFilter) {
@@ -59,8 +67,13 @@ async function _fetchHabitsAndLogs(userId, logsFilter) {
 
 // ─── Service ──────────────────────────────────────────────────────────────────
 
-export async function getMyProgress(userId) {
-  const { habits, logs } = await _fetchHabitsAndLogs(userId, {});
+export async function getMyProgress(userId, { dateFrom, dateTo } = {}) {
+  const { rangeStart, rangeEnd } = _resolveRange(dateFrom, dateTo);
+  const logsFilter = {};
+  if (rangeStart) logsFilter.date = { ...(logsFilter.date || {}), $gte: rangeStart };
+  if (rangeEnd)   logsFilter.date = { ...(logsFilter.date || {}), $lte: rangeEnd   };
+
+  const { habits, logs } = await _fetchHabitsAndLogs(userId, logsFilter);
 
   const totalHabits    = habits.length;
   const activeHabits   = habits.filter(h => (h.statut || "active") === "active").length;
@@ -78,10 +91,11 @@ export async function getMyProgress(userId) {
   const todayCompleted = todayLogs.filter(l => l.statut === "completee").length;
   const todayRate     = todayLogs.length ? Number(((todayCompleted / todayLogs.length) * 100).toFixed(1)) : 0;
 
-  const weekStart = _startOfWeekMonday(new Date());
-  const weekEnd = _endOfDay(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6));
-  const weekLogs = logs.filter(l => l.date >= weekStart && l.date <= weekEnd);
-  const perDay   = new Map();
+  // Weekly progress: if a range is provided use its first 7 days, else use current Mon-Sun
+  const weekStart = rangeStart ? new Date(rangeStart) : _startOfWeekMonday(new Date());
+  const weekEnd   = _endOfDay(new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate() + 6));
+  const weekLogs  = logs.filter(l => l.date >= weekStart && l.date <= weekEnd);
+  const perDay    = new Map();
 
   for (let i = 0; i < 7; i++) {
     const d = new Date(weekStart);
@@ -115,7 +129,7 @@ export async function getMyProgress(userId) {
 
   const habitsProgress = habits
     .map(h => {
-      const s = logsByHabit.get(h._id) || { total: 0, completed: 0, lastLogDate: null };
+      const s      = logsByHabit.get(h._id) || { total: 0, completed: 0, lastLogDate: null };
       const streak = streakMap[h._id] || { currentStreak: 0, bestStreak: 0, lastCompletedDate: null };
       return {
         habit_id: h._id, habit_nom: h.nom, statut: h.statut || "active",
@@ -136,7 +150,8 @@ export async function getMyProgress(userId) {
       paused_habits: pausedHabits, archived_habits: archivedHabits,
       total_logs: totalLogs, completed_logs: completedLogs, partial_logs: partialLogs,
       completion_rate: completionRate, today_logs: todayLogs.length,
-      today_completed: todayCompleted, today_rate: todayRate
+      today_completed: todayCompleted, today_rate: todayRate,
+      ...(rangeStart ? { date_from: rangeStart.toISOString(), date_to: (rangeEnd || new Date()).toISOString() } : {})
     },
     weekly_progress: weeklyProgress,
     habits_progress: habitsProgress
@@ -182,15 +197,18 @@ export async function getToday(userId) {
   };
 }
 
-export async function getCalendar(userId, dateParam) {
+export async function getCalendar(userId, dateParam, { dateFrom, dateTo } = {}) {
   const requestedDate = dateParam ? new Date(dateParam) : new Date();
   if (Number.isNaN(requestedDate.getTime())) {
     const { createError } = await import("@/core/errors.js");
     throw createError(400, "Date invalide");
   }
 
-  const monthStart     = new Date(requestedDate.getFullYear(), requestedDate.getMonth(), 1);
-  const monthEnd       = new Date(requestedDate.getFullYear(), requestedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+  // If a custom range is provided, use it; otherwise fall back to the requested month
+  const { rangeStart, rangeEnd } = _resolveRange(dateFrom, dateTo);
+  const monthStart = rangeStart ?? new Date(requestedDate.getFullYear(), requestedDate.getMonth(), 1);
+  const monthEnd   = rangeEnd   ?? new Date(requestedDate.getFullYear(), requestedDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
   const selectedDayKey = _dayKey(requestedDate);
   const todayStart     = _startOfDay(new Date());
 
