@@ -1,11 +1,3 @@
-/* ═══════════════════════════════════════════════════════
-   HabitFlow — Global CSS custom properties
-   Two namespaces (intentional):
-     --hf-*   → shell layout tokens (hex, direct use)
-     bare --* → Tailwind design-system tokens (HSL channels,
-                used as hsl(var(--name)) in dashboard)
-   ═══════════════════════════════════════════════════════ */
-
 :root {
   /* ── App palette (hex) — used by admin + body styles ─── */
   --background:   #F0F0FA;

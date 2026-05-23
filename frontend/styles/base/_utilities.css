@@ -1,7 +1,4 @@
-/* ═══════════════════════════════════════════════════════
-   HabitFlow — Custom utility classes
-   These replace Tailwind utilities that Bootstrap 5 doesn't cover.
-   ═══════════════════════════════════════════════════════ */
+
 
 /* ── Typography ────────────────────────────────────────── */
 .text-sm  { font-size: 0.875rem; line-height: 1.25rem; }

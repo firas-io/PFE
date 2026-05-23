@@ -1,9 +1,3 @@
-/*
- * HabitFlow Design System — Dashboard Theme
- * CSS custom properties for the dashboard UI.
- * Variables scoped to :root & .hf-shell.
- */
-
 :root,
 .hf-shell {
   --background: #F0F0FA;

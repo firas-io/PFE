@@ -1,8 +1,4 @@
-/* ═══════════════════════════════════════════════════════
-   HabitFlow — Calendar page
-   ═══════════════════════════════════════════════════════ */
 
-/* ── Stats bar ───────────────────────────────────────────── */
 .cal-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
