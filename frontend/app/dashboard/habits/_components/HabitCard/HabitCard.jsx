@@ -104,6 +104,7 @@ export function HabitCard({
   onUpdateDate,
   onToggleDay,
   canManage = true,
+  canNotes = true,
 }) {
   const isGlobal = !!(habit.is_global || habit.created_by_admin);
   const { getBySlug } = useCategories();
@@ -272,9 +273,11 @@ export function HabitCard({
                     <Copy size={14} style={{ color: '#6366F1' }} /> {isGlobal ? 'Dupliquer dans mes habitudes' : 'Dupliquer'}
                   </button>
                 )}
-                <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F0FDFA'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onNotes(habit); }}>
-                  <FileText size={14} style={{ color: habit.note ? '#0D9488' : '#6366F1' }} /> {habit.note ? 'Modifier les notes' : 'Ajouter des notes'}
-                </button>
+                {canNotes && (
+                  <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F0FDFA'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onNotes(habit); }}>
+                    <FileText size={14} style={{ color: habit.note ? '#0D9488' : '#6366F1' }} /> {habit.note ? 'Modifier les notes' : 'Ajouter des notes'}
+                  </button>
+                )}
                 {canManage && (
                   <>
                     <div style={{ height: 1, background: '#F0EFF9', margin: '2px 0' }} />

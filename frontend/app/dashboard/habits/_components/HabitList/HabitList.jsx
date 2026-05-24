@@ -5,7 +5,7 @@ import { apiFetch } from '@/lib/api';
 import { searchHabits } from '@/lib/search';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 import { getUser, setUser as storeUser } from '@/lib/auth';
-import { canCreateHabits, canManageHabits } from '@/src/utils/permissions';
+import { canCreateHabits, canManageHabits, canAddNotes } from '@/src/utils/permissions';
 import { useToast } from '@/components/Toast';
 import { useCategories } from '@/hooks/useCategories';
 import { priorityRank, statusRank } from '../../_constants';
@@ -23,6 +23,7 @@ export const HabitList = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const canCreate = canCreateHabits(currentUser);
   const canManage = canManageHabits(currentUser);
+  const canNotes  = canAddNotes(currentUser);
   const [habits, setHabits] = useState([]);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -405,11 +406,12 @@ export const HabitList = () => {
           onTogglePause={handleTogglePause}
           onArchive={handleArchive}
           onToggleDay={handleToggleDay}
-          onNotes={handleOpenNotes}
+          onNotes={canNotes ? handleOpenNotes : undefined}
           onUpdateDate={handleUpdateDate}
           weeklyCompletionMap={weeklyCompletionMap}
           todayIndex={todayIndex}
           canManage={canManage}
+          canNotes={canNotes}
         />
       </div>
 
@@ -427,20 +429,24 @@ export const HabitList = () => {
         allowedCategories={allowedCategorySlugs.length > 0 ? allowedCategorySlugs : userCategories}
       />
 
-      <NotesModal
-        show={showNotes}
-        habitNotes={notesHabit?.note ?? ''}
-        onClose={() => { setShowNotes(false); setNotesHabit(null); }}
-        onSave={handleSaveNotes}
-        onViewHistory={handleViewHistory}
-        saving={busy}
-      />
+      {canNotes && (
+        <NotesModal
+          show={showNotes}
+          habitNotes={notesHabit?.note ?? ''}
+          onClose={() => { setShowNotes(false); setNotesHabit(null); }}
+          onSave={handleSaveNotes}
+          onViewHistory={handleViewHistory}
+          saving={busy}
+        />
+      )}
 
-      <NoteHistoryModal
-        show={showHistory}
-        history={noteHistory}
-        onClose={() => setShowHistory(false)}
-      />
+      {canNotes && (
+        <NoteHistoryModal
+          show={showHistory}
+          history={noteHistory}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 };

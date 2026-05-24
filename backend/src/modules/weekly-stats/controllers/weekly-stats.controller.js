@@ -14,7 +14,10 @@ const getManagerStats = _h(async (req,  reply) => {
   const { period, dateFrom, dateTo } = req.query ?? {};
   reply.send(await WeeklyStatsService.getManagerStats(req.user.id, { period, dateFrom, dateTo }));
 });
-const getUserStats    = _h(async (req,  reply) => { reply.send(await WeeklyStatsService.getUserStats(req.user.id)); });
+const getUserStats    = _h(async (req,  reply) => {
+  const { period, dateFrom, dateTo } = req.query ?? {};
+  reply.send(await WeeklyStatsService.getUserStats(req.user.id, { period, dateFrom, dateTo }));
+});
 
 const WeeklyStatsController = { getAdminStats, getManagerStats, getUserStats };
 export default WeeklyStatsController;

@@ -352,7 +352,10 @@ class HabitsService {
     return Habits.updateOne({ _id: id }, { $set: { statut }, $unset: { date_archivage: "" } });
   }
 
-  static async updateHabitNotes(id, body, userId) {
+  static async updateHabitNotes(id, body, userId, userRole) {
+    if (userRole?.toLowerCase() === "manager")
+      throw new AppError("Les managers ne peuvent pas modifier les notes d'habitudes.", 403, ErrorsCodes.ACCESS_DENIED);
+
     const habit = await Habits.findById(id);
     if (!habit) throw new AppError(ErrorMessages[ErrorsCodes.NOT_FOUND], 404, ErrorsCodes.NOT_FOUND);
 
@@ -373,7 +376,10 @@ class HabitsService {
     return Habits.updateOne({ _id: id }, { $set: { note: newNote } });
   }
 
-  static async getNoteHistory(id, userId, permissions) {
+  static async getNoteHistory(id, userId, permissions, userRole) {
+    if (userRole?.toLowerCase() === "manager")
+      throw new AppError("Les managers ne peuvent pas accéder à l'historique des notes.", 403, ErrorsCodes.ACCESS_DENIED);
+
     const habit = await Habits.findById(id);
     if (!habit) throw new AppError(ErrorMessages[ErrorsCodes.NOT_FOUND], 404, ErrorsCodes.NOT_FOUND);
 

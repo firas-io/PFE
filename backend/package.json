@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node --import ./src/loader.js server.js",
     "dev": "nodemon --import ./src/loader.js server.js",
-    "ldap": "powershell -ExecutionPolicy Bypass -File ../scripts/start-ldap.ps1"
+    "ldap": "powershell -ExecutionPolicy Bypass -File ../scripts/start-ldap.ps1",
+    "seed:demo": "node --import ./src/loader.js src/fixtures/seed-demo-data.js"
   },
   "keywords": [],
   "author": "",

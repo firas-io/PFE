@@ -1,16 +1,14 @@
 'use client';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  Area, AreaChart, Bar, BarChart,
-  CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
-} from 'recharts';
 import { motion } from 'framer-motion';
 import { IconRefresh } from '@tabler/icons-react';
 
 import { apiFetch } from '@/lib/api';
 import { getUser } from '@/lib/auth';
 import { userFirstName } from '@/lib/userDisplay';
+import { canViewTeamAnalytics } from '@/src/utils/permissions';
 import DateFilter from '@/components/DateFilter';
+import { StatsChartsGrid } from '@/app/dashboard/stats/_components/charts/StatsChartsGrid';
 
 function statsQuery(range) {
   const params = new URLSearchParams();
@@ -70,16 +68,7 @@ function AdminView({ sessionUser }) {
 
   if (!mounted) return <Spinner />;
 
-  const dailyChart = (stats?.daily_progress ?? []).map(d => ({
-    day:       d.label.split(' ')[0],
-    label:     d.label,
-    rate:      d.rate,
-    completed: d.completed,
-    total:     d.total,
-  }));
-
   const topCategories = Array.isArray(stats?.top_categories) ? stats.top_categories : [];
-  const maxCatCount   = topCategories.length ? Math.max(...topCategories.map(c => c.count)) : 1;
 
   const kpiCards = stats ? [
     {
@@ -158,65 +147,12 @@ function AdminView({ sessionUser }) {
               </motion.div>
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-            <div style={CARD}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: 0 }}>Taux de complétion plateforme</h3>
-                  <p style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>Semaine en cours (lundi-dimanche)</p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#4338CA', fontWeight: 600 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4338CA' }}/>Complétion %
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={dailyChart}>
-                  <defs>
-                    <linearGradient id="adminAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4338CA" stopOpacity={0.25}/><stop offset="100%" stopColor="#4338CA" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }}/>
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} width={36}/>
-                  <Tooltip formatter={v => [`${v}%`, 'Complétion']} labelFormatter={(_, p) => p?.[0]?.payload?.label ?? ''} contentStyle={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 12 }}/>
-                  <Area type="monotone" dataKey="rate" stroke="#4338CA" strokeWidth={2.5} fill="url(#adminAreaGrad)" dot={{ r: 3, fill: '#4338CA', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#4338CA', stroke: '#fff', strokeWidth: 2 }}/>
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-            <div style={CARD}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 16px' }}>Entrées par jour</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={dailyChart} barGap={3}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }}/>
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} width={28}/>
-                  <Tooltip formatter={(v, n) => [v, n === 'completed' ? 'Complétées' : 'Total']} labelFormatter={(_, p) => p?.[0]?.payload?.label ?? ''} contentStyle={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 12 }}/>
-                  <Bar dataKey="total"     fill="#E5E7EB" radius={[4, 4, 0, 0]}/>
-                  <Bar dataKey="completed" fill="#4338CA" radius={[4, 4, 0, 0]}/>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-            <div style={CARD}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 16px' }}>Top Catégories</h3>
-              {topCategories.length === 0 ? <p style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '20px 0' }}>Aucune donnée</p> : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {topCategories.map((c, i) => (
-                    <div key={c.category}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 5 }}>
-                        <span style={{ fontSize: 12, fontWeight: 600, color: '#374151', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '70%' }}>{CATEGORY_LABELS[c.category] || c.category}</span>
-                        <span style={{ fontSize: 12, fontWeight: 700, color: COLORS[i % COLORS.length], flexShrink: 0, marginLeft: 8 }}>{c.count} hab.</span>
-                      </div>
-                      <div style={{ height: 6, background: '#F3F4F6', borderRadius: 6, overflow: 'hidden' }}>
-                        <motion.div initial={{ width: 0 }} animate={{ width: `${Math.round((c.count / maxCatCount) * 100)}%` }} transition={{ duration: 0.8, delay: i * 0.1 }} style={{ height: '100%', background: COLORS[i % COLORS.length], borderRadius: 6 }}/>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+          <StatsChartsGrid
+            stats={stats}
+            showTeamCharts={canViewTeamAnalytics(sessionUser)}
+            gradientId="adminGrad"
+          />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, maxWidth: 420 }}>
             <div style={{ borderRadius: 16, padding: '20px', background: 'linear-gradient(135deg, #4338CA, #7C3AED)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
               <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
@@ -265,14 +201,6 @@ function ManagerView({ sessionUser }) {
   useEffect(() => { setMounted(true); refresh(); }, [refresh]);
 
   if (!mounted) return <Spinner />;
-
-  const dailyChart = (stats?.daily_progress ?? []).map(d => ({
-    day:       d.label.split(' ')[0],
-    label:     d.label,
-    rate:      d.rate,
-    completed: d.completed,
-    total:     d.total,
-  }));
 
   const members   = stats?.members_breakdown ?? [];
   const maxMRate  = members.length ? Math.max(...members.map(m => m.completion_rate)) : 1;
@@ -361,56 +289,13 @@ function ManagerView({ sessionUser }) {
             ))}
           </div>
 
-          {/* Charts Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+          <StatsChartsGrid
+            stats={stats}
+            showTeamCharts={canViewTeamAnalytics(sessionUser)}
+            gradientId="teamGrad"
+          />
 
-            {/* Daily area chart */}
-            <div style={CARD}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
-                <div>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: 0 }}>Taux de complétion de l'équipe</h3>
-                  <p style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>Semaine en cours (lundi-dimanche)</p>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#4338CA', fontWeight: 600 }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4338CA' }}/>Complétion %
-                </div>
-              </div>
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart data={dailyChart}>
-                  <defs>
-                    <linearGradient id="teamAreaGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="#4338CA" stopOpacity={0.25}/><stop offset="100%" stopColor="#4338CA" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }}/>
-                  <YAxis domain={[0, 100]} axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#9CA3AF' }} width={36}/>
-                  <Tooltip formatter={v => [`${v}%`, 'Complétion']} labelFormatter={(_, p) => p?.[0]?.payload?.label ?? ''} contentStyle={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 12 }}/>
-                  <Area type="monotone" dataKey="rate" stroke="#4338CA" strokeWidth={2.5} fill="url(#teamAreaGrad)" dot={{ r: 3, fill: '#4338CA', strokeWidth: 0 }} activeDot={{ r: 5, fill: '#4338CA', stroke: '#fff', strokeWidth: 2 }}/>
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Daily bar chart */}
-            <div style={CARD}>
-              <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 16px' }}>Entrées par jour</h3>
-              <ResponsiveContainer width="100%" height={220}>
-                <BarChart data={dailyChart} barGap={3}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" vertical={false}/>
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }}/>
-                  <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#9CA3AF' }} width={28}/>
-                  <Tooltip formatter={(v, n) => [v, n === 'completed' ? 'Complétées' : 'Total']} labelFormatter={(_, p) => p?.[0]?.payload?.label ?? ''} contentStyle={{ background: '#fff', border: '1px solid #E5E7EB', borderRadius: 10, fontSize: 12 }}/>
-                  <Bar dataKey="total"     fill="#E5E7EB" radius={[4, 4, 0, 0]}/>
-                  <Bar dataKey="completed" fill="#4338CA" radius={[4, 4, 0, 0]}/>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-
-          {/* Bottom Row */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-
-            {/* Members breakdown */}
             <div style={CARD}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 16px' }}>Performance par membre</h3>
               {members.length === 0 ? (

@@ -1,9 +1,9 @@
-import { UserWeeklyStats } from './_components/UserWeeklyStats/UserWeeklyStats';
+import { StatsDashboard } from './_components/StatsDashboard';
 
 export const metadata = {
   title: 'Statistiques | HabitFlow',
 };
 
 export default function StatsPage() {
-  return <UserWeeklyStats />;
+  return <StatsDashboard />;
 }

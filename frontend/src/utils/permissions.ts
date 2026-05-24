@@ -74,6 +74,13 @@ export function canViewStats(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["STATS_VIEW", "ADMIN_STATS_VIEW", "LOGS_VIEW"]);
 }
 
+/** Charts équipe : taux par habitude + productivité utilisateurs (admin / manager uniquement). */
+export function canViewTeamAnalytics(user: StoredAuthUser | null | undefined): boolean {
+  const r = user?.role;
+  if (r === "admin" || r === "manager") return true;
+  return hasAnyPermission(user, ["ADMIN_STATS_VIEW", "MANAGER_USERS_VIEW"]);
+}
+
 export function canViewProgress(user: StoredAuthUser | null | undefined): boolean {
   return hasPermission(user, "PROGRESS_VIEW");
 }
@@ -104,4 +111,11 @@ export function canViewRoles(user: StoredAuthUser | null | undefined): boolean {
 // ─── Categories ───────────────────────────────────────────────────────────────
 export function canViewCategories(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["CATEGORIES_VIEW", "CATEGORIES_MANAGE"]);
+}
+
+// ─── Notes ────────────────────────────────────────────────────────────────────
+/** Managers ne peuvent pas ajouter/modifier les notes d'habitudes. */
+export function canAddNotes(user: StoredAuthUser | null | undefined): boolean {
+  if (!user) return false;
+  return (user.role?.toLowerCase() ?? '') !== 'manager';
 }

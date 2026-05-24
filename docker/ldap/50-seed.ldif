@@ -9,7 +9,23 @@ objectClass: organizationalUnit
 ou: people
 
 # ══════════════════════════════════════════════════════════════════════════════
-# MANAGERS  (ou=managers)
+# ADMIN
+# ══════════════════════════════════════════════════════════════════════════════
+
+dn: uid=admin,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Admin System
+sn: System
+givenName: Admin
+uid: admin
+mail: admin@habitflow.local
+userPassword: Admin123!
+
+# ══════════════════════════════════════════════════════════════════════════════
+# MANAGERS (3 équipes)
 # ══════════════════════════════════════════════════════════════════════════════
 
 dn: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
@@ -36,24 +52,20 @@ uid: karim.amine
 mail: karim.amine@habitflow.local
 userPassword: Manager123!
 
-# ══════════════════════════════════════════════════════════════════════════════
-# ADMIN  (ou=people — email spécial reconnu comme admin)
-# ══════════════════════════════════════════════════════════════════════════════
-
-dn: uid=admin,ou=people,dc=habitflow,dc=local
+dn: uid=claire.dubois,ou=managers,dc=habitflow,dc=local
 objectClass: inetOrgPerson
 objectClass: organizationalPerson
 objectClass: person
 objectClass: top
-cn: Admin System
-sn: System
-givenName: Admin
-uid: admin
-mail: admin@habitflow.local
-userPassword: Admin123!
+cn: Claire Dubois
+sn: Dubois
+givenName: Claire
+uid: claire.dubois
+mail: claire.dubois@habitflow.local
+userPassword: Manager123!
 
 # ══════════════════════════════════════════════════════════════════════════════
-# UTILISATEURS  (ou=people) — attribut manager = DN complet du manager
+# ÉQUIPE SOPHIE MARTIN — Bien-être & Productivité (5 membres)
 # ══════════════════════════════════════════════════════════════════════════════
 
 dn: uid=ali.ben,ou=people,dc=habitflow,dc=local
@@ -66,7 +78,7 @@ sn: Ben
 givenName: Ali
 uid: ali.ben
 mail: ali.ben@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
 
 dn: uid=sara.kim,ou=people,dc=habitflow,dc=local
@@ -79,7 +91,7 @@ sn: Kim
 givenName: Sara
 uid: sara.kim
 mail: sara.kim@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
 
 dn: uid=yassine.rahim,ou=people,dc=habitflow,dc=local
@@ -92,7 +104,7 @@ sn: Rahim
 givenName: Yassine
 uid: yassine.rahim
 mail: yassine.rahim@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
 
 dn: uid=maya.zidane,ou=people,dc=habitflow,dc=local
@@ -105,8 +117,25 @@ sn: Zidane
 givenName: Maya
 uid: maya.zidane
 mail: maya.zidane@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
+
+dn: uid=lucas.renard,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Lucas Renard
+sn: Renard
+givenName: Lucas
+uid: lucas.renard
+mail: lucas.renard@habitflow.local
+userPassword: User123!
+manager: uid=sophie.martin,ou=managers,dc=habitflow,dc=local
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ÉQUIPE KARIM AMINE — Tech & Apprentissage (5 membres)
+# ══════════════════════════════════════════════════════════════════════════════
 
 dn: uid=omar.said,ou=people,dc=habitflow,dc=local
 objectClass: inetOrgPerson
@@ -118,7 +147,7 @@ sn: Said
 givenName: Omar
 uid: omar.said
 mail: omar.said@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
 
 dn: uid=lina.martin,ou=people,dc=habitflow,dc=local
@@ -131,7 +160,7 @@ sn: Martin
 givenName: Lina
 uid: lina.martin
 mail: lina.martin@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
 
 dn: uid=nora.haddad,ou=people,dc=habitflow,dc=local
@@ -144,7 +173,7 @@ sn: Haddad
 givenName: Nora
 uid: nora.haddad
 mail: nora.haddad@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
 
 dn: uid=adam.faris,ou=people,dc=habitflow,dc=local
@@ -157,5 +186,87 @@ sn: Faris
 givenName: Adam
 uid: adam.faris
 mail: adam.faris@habitflow.local
-userPassword: Test123!
+userPassword: User123!
 manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
+
+dn: uid=ines.bouazizi,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Ines Bouazizi
+sn: Bouazizi
+givenName: Ines
+uid: ines.bouazizi
+mail: ines.bouazizi@habitflow.local
+userPassword: User123!
+manager: uid=karim.amine,ou=managers,dc=habitflow,dc=local
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ÉQUIPE CLAIRE DUBOIS — Opérations & Santé (5 membres)
+# ══════════════════════════════════════════════════════════════════════════════
+
+dn: uid=emma.leroy,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Emma Leroy
+sn: Leroy
+givenName: Emma
+uid: emma.leroy
+mail: emma.leroy@habitflow.local
+userPassword: User123!
+manager: uid=claire.dubois,ou=managers,dc=habitflow,dc=local
+
+dn: uid=thomas.petit,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Thomas Petit
+sn: Petit
+givenName: Thomas
+uid: thomas.petit
+mail: thomas.petit@habitflow.local
+userPassword: User123!
+manager: uid=claire.dubois,ou=managers,dc=habitflow,dc=local
+
+dn: uid=lei.wang,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Lei Wang
+sn: Wang
+givenName: Lei
+uid: lei.wang
+mail: lei.wang@habitflow.local
+userPassword: User123!
+manager: uid=claire.dubois,ou=managers,dc=habitflow,dc=local
+
+dn: uid=fatima.elami,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Fatima El Ami
+sn: El Ami
+givenName: Fatima
+uid: fatima.elami
+mail: fatima.elami@habitflow.local
+userPassword: User123!
+manager: uid=claire.dubois,ou=managers,dc=habitflow,dc=local
+
+dn: uid=hugo.navarro,ou=people,dc=habitflow,dc=local
+objectClass: inetOrgPerson
+objectClass: organizationalPerson
+objectClass: person
+objectClass: top
+cn: Hugo Navarro
+sn: Navarro
+givenName: Hugo
+uid: hugo.navarro
+mail: hugo.navarro@habitflow.local
+userPassword: User123!
+manager: uid=claire.dubois,ou=managers,dc=habitflow,dc=local

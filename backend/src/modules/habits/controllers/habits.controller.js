@@ -34,8 +34,8 @@ const searchHabits        = _h(async (req, reply) => { reply.send(await HabitsSe
 const getMyHabits        = _h(async (req, reply) => { reply.send(await HabitsService.getMyHabits(req.user.id, req.query, req.user)); });
 const getHabitById       = _h(async (req, reply) => { reply.send(await HabitsService.getHabitById(req.params.id, req.user.id, req.user.permissions)); });
 const updateHabitStatus  = _h(async (req, reply) => { reply.send(await HabitsService.updateHabitStatus(req.params.id, req.body, req.user.id, req.user.permissions)); });
-const updateHabitNotes   = _h(async (req, reply) => { reply.send(await HabitsService.updateHabitNotes(req.params.id, req.body, req.user.id)); });
-const getNoteHistory     = _h(async (req, reply) => { reply.send(await HabitsService.getNoteHistory(req.params.id, req.user.id, req.user.permissions)); });
+const updateHabitNotes   = _h(async (req, reply) => { reply.send(await HabitsService.updateHabitNotes(req.params.id, req.body, req.user.id, req.user.role)); });
+const getNoteHistory     = _h(async (req, reply) => { reply.send(await HabitsService.getNoteHistory(req.params.id, req.user.id, req.user.permissions, req.user.role)); });
 const cloneHabit         = _h(async (req, reply) => { reply.code(httpStatus.CREATED).send(await HabitsService.cloneHabit(req.params.id, req.body, req.user.id, req)); });
 
 const archiveHabit = _h(async (req, reply) => {

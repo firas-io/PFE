@@ -19,6 +19,7 @@ export const HabitTable = ({
   weeklyCompletionMap,
   todayIndex,
   canManage = true,
+  canNotes = true,
 }) => {
   if (loading) return <div className="p-5"><HabitListSkeleton rows={4} /></div>;
 
@@ -58,6 +59,7 @@ export const HabitTable = ({
             onNotes={onNotes}
             onUpdateDate={onUpdateDate}
             canManage={canManage}
+            canNotes={canNotes}
           />
         ))}
       </AnimatePresence>
