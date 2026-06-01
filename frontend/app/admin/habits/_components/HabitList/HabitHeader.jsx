@@ -7,6 +7,8 @@ import { HABIT_STATUS_FILTERS, SORT_OPTIONS } from '../../_constants';
 export const HabitHeader = ({
   statusFilter,
   setStatusFilter,
+  visibilityFilter,
+  setVisibilityFilter,
   search,
   setSearch,
   sortBy,
@@ -53,6 +55,17 @@ export const HabitHeader = ({
           {HABIT_STATUS_FILTERS.map((s) => (
             <option key={s.value} value={s.value}>{s.label}</option>
           ))}
+        </select>
+        <select
+          className="form-select"
+          style={{ width: 'auto', minWidth: 150 }}
+          value={visibilityFilter}
+          onChange={(e) => setVisibilityFilter(e.target.value)}
+          disabled={loading}
+        >
+          <option value="all">Tous</option>
+          <option value="public">Public</option>
+          <option value="prive">Privé</option>
         </select>
         <select
           className="form-select"

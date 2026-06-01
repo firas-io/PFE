@@ -28,25 +28,7 @@ import {
 } from "@tabler/icons-react";
 import { clearAuth, getUser, setUser as storeUser } from "@/lib/auth";
 import { apiFetch } from "@/lib/api";
-import {
-  canAccessAdminShell,
-  canManageManagersCrud,
-  canViewUsers,
-  canViewHabits,
-  canManageHabits,
-  canManageCategoryTickets,
-  canViewStats,
-  canViewRoles,
-  canViewCategories,
-  canManageOffDays,
-} from "@/src/utils/permissions";
-
-const ALL_ADMIN_MOBILE_NAV = [
-  { href: "/admin",               label: "Dashboard",  icon: IconChartBar,   always: true  },
-  { href: "/admin/managers-users",label: "Managers",   icon: IconUsersGroup, permFn: canManageManagersCrud },
-  { href: "/admin/habits",        label: "Habitudes",  icon: IconProgress,   permFn: canViewHabits         },
-  { href: "/admin/tickets",       label: "Tickets",    icon: IconTicket,     permFn: canManageCategoryTickets },
-];
+import { canAccessAdminShell } from "@/src/utils/permissions";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname() ?? "";
@@ -100,16 +82,22 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     window.localStorage.setItem("habitflow_admin_dark_mode", String(darkMode));
   }, [darkMode]);
 
-  const role = (user?.role ?? "").toString().toLowerCase();
-  const isAdmin = role === "admin";
+  const role = (user?.role ?? "").toLowerCase();
+  const isAdmin   = role === "admin";
   const isManager = role === "manager";
 
-  const managerMobileNav = [
-    { href: "/dashboard/home",     label: "Mon bord",  icon: IconHome        },
-    { href: "/admin/my-users",     label: "Équipe",    icon: IconUsers       },
-    { href: "/dashboard/habits",   label: "Habitudes", icon: IconCheck       },
-    { href: "/admin/off-days",     label: "Jours off", icon: IconCalendarOff },
-  ];
+  // Mobile nav — fixe par rôle
+  const mobileNav = isAdmin ? [
+    { href: "/admin",            label: "Dashboard",  icon: IconChartBar    },
+    { href: "/admin/habits",     label: "Habitudes",  icon: IconProgress    },
+    { href: "/admin/stats",      label: "Stats",      icon: IconReportAnalytics },
+    { href: "/admin/tickets",    label: "Tickets",    icon: IconTicket      },
+  ] : isManager ? [
+    { href: "/dashboard/home",   label: "Mon bord",   icon: IconHome        },
+    { href: "/admin/my-users",   label: "Équipe",     icon: IconUsers       },
+    { href: "/dashboard/habits", label: "Habitudes",  icon: IconCheck       },
+    { href: "/admin/off-days",   label: "Jours off",  icon: IconCalendarOff },
+  ] : [];
   const mobileSidebarStyle = isMobile
     ? {
         position: "fixed" as const,
@@ -152,11 +140,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return pathname.startsWith(href);
   }
 
-  const adminMobileNav = ALL_ADMIN_MOBILE_NAV.filter(
-    (item) => item.always || (item.permFn && item.permFn(user))
-  );
-  const mobileNav = isManager ? managerMobileNav : adminMobileNav;
-
   return (
     <div className={`admin-shell${sidebarOpen ? "" : " admin-shell--sidebar-collapsed"}${darkMode ? " admin-shell--dark" : ""}`}>
       <aside
@@ -178,68 +161,51 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav id="admin-sidebar-nav" className="admin-nav" aria-label="Navigation administration">
-          <p className="admin-nav-section">Vue d&apos;ensemble</p>
 
-          <Link
-            href="/admin"
-            className={`admin-nav-link ${pathname === "/admin" ? "active" : ""}`}
-            onClick={closeSidebarOnMobile}
-          >
-            <IconChartBar size={18} stroke={1.75} aria-hidden />
-            Tableau de bord
-          </Link>
-
+          {/* ══ ADMIN ══════════════════════════════════════════════════════════ */}
           {isAdmin && (
             <>
-              {canManageManagersCrud(user) && (
-                <Link href="/admin/managers-users" className={`admin-nav-link ${pathname.startsWith("/admin/managers-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconUsersGroup size={18} stroke={1.75} aria-hidden />
-                  Managers &amp; Utilisateurs
-                </Link>
-              )}
-              {(canViewHabits(user) || canManageHabits(user)) && (
-                <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconProgress size={18} stroke={1.75} aria-hidden />
-                  Habitudes
-                </Link>
-              )}
-              {canViewCategories(user) && (
-                <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconTag size={18} stroke={1.75} aria-hidden />
-                  Catégories
-                </Link>
-              )}
-              {canManageCategoryTickets(user) && (
-                <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconTicket size={18} stroke={1.75} aria-hidden />
-                  Tickets
-                </Link>
-              )}
-              {canManageOffDays(user) && (
-                <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconCalendarOff size={18} stroke={1.75} aria-hidden />
-                  Jours off
-                </Link>
-              )}
-              {canViewStats(user) && (
-                <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
-                  Statistiques
-                </Link>
-              )}
-              {canViewRoles(user) && (
-                <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconShieldCheck size={18} stroke={1.75} aria-hidden />
-                  Permissions rôles
-                </Link>
-              )}
+              <Link href="/admin" className={`admin-nav-link ${pathname === "/admin" ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconChartBar size={18} stroke={1.75} aria-hidden />
+                Tableau de bord
+              </Link>
+
+              <p className="admin-nav-section" style={{ marginTop: 12 }}>Gestion</p>
+              <Link href="/admin/managers-users" className={`admin-nav-link ${pathname.startsWith("/admin/managers-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconUsersGroup size={18} stroke={1.75} aria-hidden />
+                Managers &amp; Utilisateurs
+              </Link>
+              <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconProgress size={18} stroke={1.75} aria-hidden />
+                Habitudes globales
+              </Link>
+              <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconTag size={18} stroke={1.75} aria-hidden />
+                Catégories
+              </Link>
+              <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconTicket size={18} stroke={1.75} aria-hidden />
+                Tickets
+              </Link>
+              <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconCalendarOff size={18} stroke={1.75} aria-hidden />
+                Jours off
+              </Link>
+              <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
+                Statistiques
+              </Link>
+              <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
+                <IconShieldCheck size={18} stroke={1.75} aria-hidden />
+                Permissions rôles
+              </Link>
             </>
           )}
 
+          {/* ══ MANAGER ════════════════════════════════════════════════════════ */}
           {isManager && (
             <>
-              {/* ── Section Mon espace (toujours visible) ── */}
-              <p className="admin-nav-section" style={{ marginTop: 12 }}>Mon espace</p>
+              <p className="admin-nav-section">Mon espace</p>
               <Link href="/dashboard/home" className={`admin-nav-link ${pathname === "/dashboard/home" ? "active" : ""}`} onClick={closeSidebarOnMobile}>
                 <IconHome size={18} stroke={1.75} aria-hidden />
                 Tableau de bord
@@ -265,7 +231,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 Mes tickets
               </Link>
 
-              {/* ── Section Mon équipe (toujours visible) ── */}
               <p className="admin-nav-section" style={{ marginTop: 12 }}>Mon équipe</p>
               <Link href="/admin/my-users" className={`admin-nav-link ${pathname.startsWith("/admin/my-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
                 <IconUsers size={18} stroke={1.75} aria-hidden />
@@ -279,109 +244,9 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                 <IconCalendarOff size={18} stroke={1.75} aria-hidden />
                 Jours off
               </Link>
-
-              {/* ── Section Administration (par permission) ── */}
-              {(canManageManagersCrud(user) || canViewUsers(user) || canViewHabits(user) || canViewCategories(user) || canManageCategoryTickets(user) || canViewStats(user) || canViewRoles(user)) && (
-                <p className="admin-nav-section" style={{ marginTop: 12 }}>Administration</p>
-              )}
-              {canManageManagersCrud(user) && (
-                <Link href="/admin/managers" className={`admin-nav-link ${pathname.startsWith("/admin/managers") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconUsersGroup size={18} stroke={1.75} aria-hidden />
-                  Gestion des managers
-                </Link>
-              )}
-              {canViewUsers(user) && (
-                <Link href="/admin/users" className={`admin-nav-link ${pathname.startsWith("/admin/users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconUsers size={18} stroke={1.75} aria-hidden />
-                  Utilisateurs
-                </Link>
-              )}
-              {(canViewHabits(user) || canManageHabits(user)) && (
-                <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconProgress size={18} stroke={1.75} aria-hidden />
-                  Habitudes globales
-                </Link>
-              )}
-              {canViewCategories(user) && (
-                <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconTag size={18} stroke={1.75} aria-hidden />
-                  Catégories
-                </Link>
-              )}
-              {canManageCategoryTickets(user) && (
-                <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconTicket size={18} stroke={1.75} aria-hidden />
-                  Tickets
-                </Link>
-              )}
-              {canViewStats(user) && (
-                <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconChartBar size={18} stroke={1.75} aria-hidden />
-                  Statistiques
-                </Link>
-              )}
-              {canViewRoles(user) && (
-                <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconShieldCheck size={18} stroke={1.75} aria-hidden />
-                  Permissions rôles
-                </Link>
-              )}
             </>
           )}
 
-          {!isAdmin && !isManager && (
-            <>
-              <p className="admin-nav-section">Administration</p>
-              {canManageOffDays(user) && (
-                <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconCalendarOff size={18} stroke={1.75} aria-hidden />
-                  Jours off
-                </Link>
-              )}
-              {(canViewHabits(user) || canManageHabits(user)) && (
-                <Link href="/admin/habits" className={`admin-nav-link ${pathname.startsWith("/admin/habits") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconProgress size={18} stroke={1.75} aria-hidden />
-                  Habitudes
-                </Link>
-              )}
-              {canViewCategories(user) && (
-                <Link href="/admin/categories" className={`admin-nav-link ${pathname.startsWith("/admin/categories") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconTag size={18} stroke={1.75} aria-hidden />
-                  Catégories
-                </Link>
-              )}
-              {canManageCategoryTickets(user) && (
-                <Link href="/admin/tickets" className={`admin-nav-link ${pathname.startsWith("/admin/tickets") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconTicket size={18} stroke={1.75} aria-hidden />
-                  Tickets
-                </Link>
-              )}
-              {canViewStats(user) && (
-                <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
-                  Statistiques
-                </Link>
-              )}
-              {canManageManagersCrud(user) && (
-                <Link href="/admin/managers-users" className={`admin-nav-link ${pathname.startsWith("/admin/managers-users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconUsersGroup size={18} stroke={1.75} aria-hidden />
-                  Managers &amp; Utilisateurs
-                </Link>
-              )}
-              {canViewUsers(user) && !canManageManagersCrud(user) && (
-                <Link href="/admin/users" className={`admin-nav-link ${pathname.startsWith("/admin/users") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconUsers size={18} stroke={1.75} aria-hidden />
-                  Utilisateurs
-                </Link>
-              )}
-              {canViewRoles(user) && (
-                <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                  <IconShieldCheck size={18} stroke={1.75} aria-hidden />
-                  Permissions rôles
-                </Link>
-              )}
-            </>
-          )}
         </nav>
 
         <div className="admin-sidebar-footer" />

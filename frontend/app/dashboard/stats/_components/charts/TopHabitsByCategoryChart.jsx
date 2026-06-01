@@ -1,26 +1,86 @@
 'use client';
+import { useState, useMemo } from 'react';
 import {
   Bar, BarChart, CartesianGrid, Cell,
   ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from 'recharts';
 import { CARD, TOOLTIP_STYLE } from './_chartTheme';
 
-export function TopHabitsByCategoryChart({ habits = [] }) {
-  const chartData = habits.map(h => ({
-    name:  h.nom?.length > 22 ? `${h.nom.slice(0, 22)}…` : h.nom,
-    full:  h.nom,
-    value: h.value,
-    label: h.label || h.category,
-  }));
+const TOP_N = 10;
+const ALL = '__all__';
+
+export function TopHabitsByCategoryChart({ habits = {} }) {
+  const [selected, setSelected] = useState(ALL);
+
+  const categories = useMemo(() => Object.keys(habits), [habits]);
+
+  const chartData = useMemo(() => {
+    let rows;
+    if (selected === ALL) {
+      rows = Object.values(habits).flat();
+    } else {
+      rows = habits[selected] ?? [];
+    }
+    return rows
+      .sort((a, b) => b.value - a.value)
+      .slice(0, TOP_N)
+      .map(h => ({
+        name:  h.nom?.length > 22 ? `${h.nom.slice(0, 22)}…` : h.nom,
+        full:  h.nom,
+        value: h.value,
+        label: h.label || h.category,
+      }));
+  }, [habits, selected]);
+
+  const subtitle = selected === ALL
+    ? 'Toutes catégories confondues'
+    : (habits[selected]?.[0]?.label ?? selected);
+
+  const tabs = [{ key: ALL, label: 'Tous' }, ...categories.map(cat => ({
+    key: cat,
+    label: habits[cat]?.[0]?.label ?? cat,
+  }))];
 
   return (
     <div style={CARD}>
       <h3 style={{ fontSize: 15, fontWeight: 700, color: '#1E1B4B', margin: '0 0 4px' }}>
         Top habitudes par catégorie
       </h3>
-      <p style={{ fontSize: 12, color: '#64748B', margin: '0 0 16px' }}>Habitudes les plus suivies (complétions)</p>
+      <p style={{ fontSize: 12, color: '#64748B', margin: '0 0 12px' }}>
+        Habitudes les plus suivies (complétions) — {subtitle}
+      </p>
+
+      {tabs.length > 1 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
+          {tabs.map(({ key, label }) => {
+            const isActive = key === selected;
+            return (
+              <button
+                key={key}
+                onClick={() => setSelected(key)}
+                style={{
+                  padding: '4px 12px',
+                  borderRadius: 20,
+                  border: isActive ? '1.5px solid #4338CA' : '1.5px solid #E5E7EB',
+                  background: isActive ? '#EEF2FF' : '#F9FAFB',
+                  color: isActive ? '#4338CA' : '#6B7280',
+                  fontSize: 12,
+                  fontWeight: isActive ? 600 : 400,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s',
+                }}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       {!chartData.length ? (
-        <p style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '40px 0' }}>Aucune activité</p>
+        <p style={{ fontSize: 13, color: '#9CA3AF', textAlign: 'center', padding: '40px 0' }}>
+          Aucune activité pour cette catégorie
+        </p>
       ) : (
         <ResponsiveContainer width="100%" height={Math.max(200, chartData.length * 36)}>
           <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 16, top: 4, bottom: 4 }}>

@@ -203,8 +203,13 @@ class HabitsService {
   static async getAllHabits(query) {
     const status = normalizeStatus(query?.statut ?? query?.status);
     const filter = status ? { statut: status } : {};
-    const page   = parseInt(query?.page)  || 1;
-    const limit  = parseInt(query?.limit) || 10;
+
+    const visibility = query?.visibility;
+    if (visibility === "public")  filter.visible_pour_tous = true;
+    else if (visibility === "prive") filter.visible_pour_tous = { $ne: true };
+
+    const page  = parseInt(query?.page)  || 1;
+    const limit = parseInt(query?.limit) || 10;
     return paginate(Habits, filter, page, limit, { sort: { createdAt: -1 } });
   }
 
@@ -292,14 +297,34 @@ class HabitsService {
       ...statusClause,
     };
 
-    return Habits.find({ $or: [{ user_id: userId, ...statusClause }, globalFilter] });
+    const rawHabits = await Habits.find({ $or: [{ user_id: userId, ...statusClause }, globalFilter] });
+
+    // Appliquer l'overlay user_habit_settings sur les habitudes globales
+    const globalIds = rawHabits.filter(h => h.is_global).map(h => h._id);
+    if (globalIds.length === 0) return rawHabits;
+
+    const allSettings = await UserHabitSettings.find({ user_id: userId, habit_id: { $in: globalIds } });
+    const settingsMap = new Map(allSettings.map(s => [String(s.habit_id), s]));
+
+    return rawHabits.map(habit => {
+      if (!habit.is_global) return habit;
+      const s = settingsMap.get(String(habit._id));
+      if (!s) return habit;
+      return {
+        ...habit,
+        priorite:   s.priorite_perso   ?? habit.priorite,
+        objectif:   s.objectif_perso   ?? habit.objectif,
+        note:       s.note             ?? habit.note,
+        date_debut: s.date_debut_perso ?? habit.date_debut,
+      };
+    });
   }
 
   static async getHabitById(id, userId, permissions) {
     const habit = await Habits.findById(id);
     if (!habit) throw new AppError(ErrorMessages[ErrorsCodes.NOT_FOUND], 404, ErrorsCodes.NOT_FOUND);
 
-    const isAdmin = permissions.includes("HABITS_VIEW") || permissions.includes("ALL");
+    const isAdmin = permissions.includes("HABITS_MANAGE") || permissions.includes("ALL");
     if (habit.user_id !== userId && !isAdmin && habit.visible_pour_tous !== true)
       throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
 
@@ -339,8 +364,7 @@ class HabitsService {
     const requesterId = String(userId ?? "");
     const isOwner = ownerId && requesterId && ownerId === requesterId;
     const sharedRaw = habit.visible_pour_tous;
-    const isSharedHabit = sharedRaw === true || sharedRaw === "true" || sharedRaw === 1 || sharedRaw === "1";
-    if (!isOwner && !isAdmin && !isSharedHabit)
+    if (!isOwner && !isAdmin)
       throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
 
     const statut = normalizeStatus(body?.statut ?? body?.status);
@@ -359,7 +383,8 @@ class HabitsService {
     const habit = await Habits.findById(id);
     if (!habit) throw new AppError(ErrorMessages[ErrorsCodes.NOT_FOUND], 404, ErrorsCodes.NOT_FOUND);
 
-    if (habit.user_id !== userId && habit.visible_pour_tous !== true)
+    const isNoteAdmin = (userRole?.toLowerCase() === "admin");
+    if (habit.user_id !== userId && !isNoteAdmin)
       throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
 
     const newNote = body?.note !== undefined ? body.note : undefined;

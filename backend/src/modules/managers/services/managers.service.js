@@ -3,6 +3,8 @@ import { paginate }  from "@/helpers/pagination.helper.js";
 import { Users }     from "@/modules/users/models/User.model.js";
 import { Roles }     from "@/modules/roles/models/Role.model.js";
 import { HabitNoteHistories } from "@/modules/habits/models/HabitNoteHistory.model.js";
+import { Habits }             from "@/modules/habits/models/Habit.model.js";
+import { UserHabitSettings }  from "@/modules/habits/models/UserHabitSettings.model.js";
 import HabitsService from "@/modules/habits/services/habits.service.js";
 import { AppError }  from "@/core/errors.js";
 import logger        from "@/utils/logger.util.js";
@@ -161,29 +163,67 @@ class ManagersService {
   }
 
   static async getManagerUsersNotes(managerId, query = {}) {
-    const page = parseInt(query?.page, 10) || 1;
-    const limit = parseInt(query?.limit, 10) || 20;
-    const skip = (page - 1) * limit;
+    const page   = parseInt(query?.page,  10) || 1;
+    const limit  = parseInt(query?.limit, 10) || 20;
     const search = (query?.search || "").trim();
 
     const teamUsers = await Users.find(
-      { manager_id: managerId, anonymized: { $ne: true } },
-      { projection: { _id: 1 } }
+      { manager_id: managerId, anonymized: { $ne: true } }
     );
-    const userIds = teamUsers.map((u) => u._id);
-    if (userIds.length === 0) {
+    if (teamUsers.length === 0) {
       return { data: [], pagination: { page, limit, total: 0, pages: 0 } };
     }
 
-    const filter = { user_id: { $in: userIds } };
-    if (search) filter.new_note = { $regex: search, $options: "i" };
+    const userIds = teamUsers.map((u) => u._id);
+    const userMap = new Map(teamUsers.map((u) => [String(u._id), withCanonicalUserFields(u)]));
 
-    const [data, total] = await Promise.all([
-      HabitNoteHistories.find(filter, { sort: { createdAt: -1 }, skip, limit }),
-      HabitNoteHistories.count(filter),
-    ]);
-    const hydrated = await HabitsService._hydrateNotesEntries(data);
-    return { data: hydrated, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
+    const noteFilter = search
+      ? { $regex: search, $options: "i" }
+      : { $exists: true, $nin: [null, ""] };
+
+    // Notes sur habitudes globales (UserHabitSettings.note)
+    const settingsFilter = { user_id: { $in: userIds }, note: noteFilter };
+    const settingsList   = await UserHabitSettings.find(settingsFilter, { sort: { updatedAt: -1 } });
+
+    const habitIds  = [...new Set(settingsList.map(s => s.habit_id).filter(Boolean))];
+    const habitDocs = habitIds.length ? await Habits.find({ _id: { $in: habitIds } }) : [];
+    const habitMap  = new Map(habitDocs.map(h => [String(h._id), h]));
+
+    const fromSettings = settingsList.map((s) => ({
+      _id:       s._id,
+      user_id:   userMap.get(String(s.user_id))   || { _id: s.user_id },
+      habit_id:  habitMap.get(String(s.habit_id)) || { _id: s.habit_id },
+      note:      s.note,
+      source:    "settings",
+      createdAt: s.updatedAt || s.createdAt,
+    }));
+
+    // Notes sur habitudes personnelles (Habits.note, is_global != true)
+    const personalHabitsFilter = {
+      user_id:   { $in: userIds },
+      is_global: { $ne: true },
+      note:      noteFilter,
+    };
+    const personalHabits = await Habits.find(personalHabitsFilter, { sort: { updatedAt: -1 } });
+
+    const fromHabits = personalHabits.map((h) => ({
+      _id:       h._id,
+      user_id:   userMap.get(String(h.user_id)) || { _id: h.user_id },
+      habit_id:  h,
+      note:      h.note,
+      source:    "habit",
+      createdAt: h.updatedAt || h.createdAt,
+    }));
+
+    // Fusionner, dédupliquer par habit+user, trier par date décroissante
+    const all = [...fromSettings, ...fromHabits]
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const total = all.length;
+    const skip  = (page - 1) * limit;
+    const data  = all.slice(skip, skip + limit);
+
+    return { data, pagination: { page, limit, total, pages: Math.ceil(total / limit) } };
   }
 
   static async createManagerUser(body, managerId) {

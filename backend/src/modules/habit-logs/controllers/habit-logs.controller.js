@@ -8,7 +8,7 @@ const _h = (fn) => async (req, reply) => {
 
 const createLog           = _h(async (req, reply) => { reply.code(httpStatus.CREATED).send(await HabitLogsService.createLog(req.body, req.user.id, req.user.permissions)); });
 const toggleLogFromBody   = _h(async (req, reply) => { reply.send(await HabitLogsService.toggleLogForDate(req.body?.habit_id, req.body?.date, req.user.id, req.user.permissions)); });
-const getAllLogs           = _h(async (req, reply) => { reply.send(await HabitLogsService.getAllLogs(req.query)); });
+const getAllLogs           = _h(async (req, reply) => { reply.send(await HabitLogsService.getAllLogs(req.query, req.user)); });
 const getLogById          = _h(async (req, reply)  => { reply.send(await HabitLogsService.getLogById(req.params.id, req.user.id, req.user.permissions)); });
 const updateLog           = _h(async (req, reply)  => { reply.send(await HabitLogsService.updateLog(req.params.id, req.body, req.user.id, req.user.permissions)); });
 const getIncompleteForDate = _h(async (req, reply) => { reply.send(await HabitLogsService.getIncompleteForDate(req.params.date, req.user.id)); });

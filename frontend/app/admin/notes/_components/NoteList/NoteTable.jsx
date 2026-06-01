@@ -38,8 +38,8 @@ export const NoteTable = ({ notes, loading, page, pagination, onPageChange }) =>
               notes.map((entry) => (
                 <tr key={entry._id}>
                   <td>
-                    <div className="fw-medium">{userFirstName(entry.utilisateur_id)} {userLastName(entry.utilisateur_id)}</div>
-                    <div className="text-secondary" style={{ fontSize: 12 }}>{entry.utilisateur_id?.email}</div>
+                    <div className="fw-medium">{userFirstName(entry.user_id)} {userLastName(entry.user_id)}</div>
+                    <div className="text-secondary" style={{ fontSize: 12 }}>{entry.user_id?.email}</div>
                   </td>
                   <td>
                     <div className="fw-medium">{entry.habit_id?.nom}</div>
@@ -48,7 +48,7 @@ export const NoteTable = ({ notes, loading, page, pagination, onPageChange }) =>
                   <td>{actionLabel(entry.action)}</td>
                   <td>
                     <span className="text-secondary" style={{ maxWidth: 260, display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: 13 }}>
-                      {entry.note_text || <em style={{ opacity: 0.6 }}>vide</em>}
+                      {entry.new_note || <em style={{ opacity: 0.6 }}>vide</em>}
                     </span>
                   </td>
                   <td className="text-secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>

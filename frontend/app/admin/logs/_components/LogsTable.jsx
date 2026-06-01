@@ -1,10 +1,9 @@
 'use client';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { IconRefresh } from '@tabler/icons-react';
 
 import { apiFetch } from '@/lib/api';
 import { getToken } from '@/lib/auth';
-import { userFirstName, userLastName } from '@/lib/userDisplay';
 import Pagination from '@/components/Pagination';
 
 const PAGE_SIZE = 50;
@@ -29,76 +28,59 @@ function truncate(str, max = 60) {
 export function LogsTable() {
   const [token,        setToken]        = useState(null);
   const [logs,         setLogs]         = useState([]);
+  const [pagination,   setPagination]   = useState({ total: 0, pages: 1, currentPage: 1 });
   const [loading,      setLoading]      = useState(true);
   const [error,        setError]        = useState(null);
   const [dateDebut,    setDateDebut]    = useState('');
   const [dateFin,      setDateFin]      = useState('');
   const [filterStatut, setFilterStatut] = useState('all');
   const [search,       setSearch]       = useState('');
-  const [page,         setPage]         = useState(0);
+  const [page,         setPage]         = useState(1);
+  const searchDebounceRef = useRef(null);
 
   useEffect(() => { setToken(getToken()); }, []);
 
-  // ── Data load — 3 parallel calls + client-side enrichment ─────────────────
-  const refresh = useCallback(async () => {
+  // ── Data load — pagination + filtres server-side ─────────────────────────
+  const refresh = useCallback(async (p = 1) => {
     setLoading(true);
     setError(null);
     try {
-      const [logsData, habitsData, usersData] = await Promise.all([
-        apiFetch('/logs'),
-        apiFetch('/habits?includeArchived=true'),
-        apiFetch('/users'),
-      ]);
+      const params = new URLSearchParams({ page: String(p), limit: String(PAGE_SIZE) });
+      if (filterStatut !== 'all') params.set('statut',    filterStatut);
+      if (dateDebut)              params.set('dateDebut', dateDebut);
+      if (dateFin)                params.set('dateFin',   dateFin);
+      if (search.trim())          params.set('search',    search.trim());
 
-      const habitMap = {};
-      if (Array.isArray(habitsData)) habitsData.forEach(h => { habitMap[h._id] = h; });
+      const result = await apiFetch(`/logs?${params}`);
+      const data   = Array.isArray(result) ? result : (result?.data ?? []);
+      const pag    = result?.pagination ?? { total: data.length, pages: 1, currentPage: p };
 
-      const userMap = {};
-      if (Array.isArray(usersData)) usersData.forEach(u => { userMap[u._id] = u; });
-
-      const enriched = (Array.isArray(logsData) ? logsData : []).map(log => {
-        const habit = habitMap[log.habit_id];
-        const user  = userMap[log.user_id];
-        return {
-          ...log,
-          habitNom: habit?.nom || `[${(log.habit_id || '?').slice(0, 8)}…]`,
-          userName: user
-            ? (`${userFirstName(user)} ${userLastName(user)}`).trim() || user.email || log.user_id
-            : 'Compte supprimé',
-        };
-      });
-
-      // Sort desc by date
-      enriched.sort((a, b) => new Date(b.date) - new Date(a.date));
-
-      setLogs(enriched);
+      setLogs(data);
+      setPagination(pag);
+      setPage(p);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de chargement des logs.');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filterStatut, dateDebut, dateFin, search]);
 
-  useEffect(() => { if (token) refresh(); }, [token, refresh]);
+  // Un seul effet — évite le double appel au montage
+  useEffect(() => {
+    if (!token) return;
+    refresh(1);
+  }, [token, filterStatut, dateDebut, dateFin]); // search géré séparément via debounce
 
-  // ── Reset page on filter change ───────────────────────────────────────────
-  useEffect(() => { setPage(0); }, [filterStatut, search, dateDebut, dateFin]);
+  // Debounce recherche : attend 400ms après la dernière frappe
+  useEffect(() => {
+    if (!token) return;
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => refresh(1), 400);
+    return () => clearTimeout(searchDebounceRef.current);
+  }, [search]);
 
-  // ── Filter + paginate ─────────────────────────────────────────────────────
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase().trim();
-    return logs.filter(log => {
-      if (filterStatut !== 'all' && log.statut !== filterStatut) return false;
-      const logDate = (log.date || '').slice(0, 10);
-      if (dateDebut && logDate < dateDebut) return false;
-      if (dateFin   && logDate > dateFin)   return false;
-      if (q && !`${log.userName || ''} ${log.habitNom || ''}`.toLowerCase().includes(q)) return false;
-      return true;
-    });
-  }, [logs, filterStatut, search, dateDebut, dateFin]);
-
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE) || 1;
-  const paginated  = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = pagination.pages || 1;
+  const paginated  = logs;
 
   // ── Initial token spinner ─────────────────────────────────────────────────
   if (!token) {
@@ -116,7 +98,7 @@ export function LogsTable() {
       <div className="adm-header">
         <div>
           <h1 className="adm-title">Logs</h1>
-          <p className="adm-subtitle">{logs.length} entrée{logs.length !== 1 ? 's' : ''} au total</p>
+          <p className="adm-subtitle">{pagination.total ?? logs.length} entrée{(pagination.total ?? logs.length) !== 1 ? 's' : ''} au total</p>
         </div>
         <div className="adm-header-actions">
           <button className="btn btn-outline-secondary" type="button" title="Actualiser" onClick={refresh} disabled={loading}>
@@ -258,9 +240,9 @@ export function LogsTable() {
           </div>
 
           <Pagination
-            currentPage={page + 1}
+            currentPage={page}
             totalPages={totalPages}
-            onPageChange={(p) => setPage(p - 1)}
+            onPageChange={(p) => refresh(p)}
           />
         </>
       )}

@@ -20,10 +20,9 @@ function formatDate(iso) {
   });
 }
 
-function ActionBadge({ action }) {
-  if (action === 'created') return <span className="adm-status adm-status--done">Créée</span>;
-  if (action === 'deleted') return <span className="adm-status adm-status--rejected">Supprimée</span>;
-  return <span className="adm-status adm-status--pending">Modifiée</span>;
+function SourceBadge({ source }) {
+  if (source === 'settings') return <span className="adm-status adm-status--done">Global</span>;
+  return <span className="adm-status adm-status--pending">Personnel</span>;
 }
 
 export function NotesTable() {
@@ -43,33 +42,22 @@ export function NotesTable() {
     setLoading(true);
     setError(null);
     try {
-      const [notesRes, usersData, habitsData] = await Promise.all([
-        apiFetch('/managers/users/notes?limit=500'),
-        apiFetch('/managers/users'),
-        apiFetch('/habits'),
-      ]);
-
-      const userMap = {};
-      if (Array.isArray(usersData)) usersData.forEach(u => { userMap[u._id] = u; });
-
-      const habitMap = {};
-      if (Array.isArray(habitsData)) habitsData.forEach(h => { habitMap[h._id] = h; });
-
+      // Le backend hydrate déjà user_id → objet user et habit_id → objet habit
+      const notesRes = await apiFetch('/managers/users/notes?limit=500');
       const raw = Array.isArray(notesRes?.data) ? notesRes.data
         : Array.isArray(notesRes) ? notesRes : [];
 
-      const enriched = raw.map(n => {
-        const user  = userMap[n.user_id];
-        const habit = habitMap[n.habit_id];
-        return {
-          ...n,
-          userName:  user
-            ? (`${userFirstName(user)} ${userLastName(user)}`).trim() || user.email
-            : `[${String(n.user_id || '?').slice(0, 8)}…]`,
-          habitName: habit?.nom || `[${String(n.habit_id || '?').slice(0, 8)}…]`,
-          date:      n.createdAt?.slice(0, 10) ?? '',
-        };
-      });
+      const enriched = raw.map(n => ({
+        ...n,
+        userName:  n.user_id && typeof n.user_id === 'object'
+          ? (`${userFirstName(n.user_id)} ${userLastName(n.user_id)}`).trim() || n.user_id.email || '—'
+          : `[${String(n.user_id || '?').slice(0, 8)}…]`,
+        habitName: n.habit_id && typeof n.habit_id === 'object'
+          ? n.habit_id.nom || '—'
+          : `[${String(n.habit_id || '?').slice(0, 8)}…]`,
+        noteText:  n.note || n.new_note || '—',
+        date:      n.createdAt?.slice(0, 10) ?? '',
+      }));
 
       enriched.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
       setNotes(enriched);
@@ -200,7 +188,7 @@ export function NotesTable() {
                     <th>Utilisateur</th>
                     <th>Habitude</th>
                     <th>Note</th>
-                    <th>Action</th>
+                    <th>Type</th>
                     <th>Date</th>
                   </tr>
                 </thead>
@@ -215,8 +203,8 @@ export function NotesTable() {
                     <tr key={n._id}>
                       <td><div className="fw-medium">{n.userName}</div></td>
                       <td className="text-secondary" style={{ fontSize: 12 }}>{n.habitName}</td>
-                      <td className="text-secondary" style={{ fontSize: 12, maxWidth: 320 }}>{truncate(n.new_note)}</td>
-                      <td><ActionBadge action={n.action} /></td>
+                      <td className="text-secondary" style={{ fontSize: 12, maxWidth: 320 }}>{truncate(n.noteText)}</td>
+                      <td><SourceBadge source={n.source} /></td>
                       <td className="text-secondary" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>{formatDate(n.createdAt)}</td>
                     </tr>
                   ))}
@@ -245,9 +233,9 @@ export function NotesTable() {
                       <div className="fw-medium">{n.userName}</div>
                       <div className="text-secondary" style={{ fontSize: 12 }}>{n.habitName}</div>
                     </div>
-                    <ActionBadge action={n.action} />
+                    <SourceBadge source={n.source} />
                   </div>
-                  <div className="text-secondary mb-1" style={{ fontSize: 12 }}>{truncate(n.new_note)}</div>
+                  <div className="text-secondary mb-1" style={{ fontSize: 12 }}>{truncate(n.noteText)}</div>
                   <div className="text-secondary" style={{ fontSize: 12 }}>{formatDate(n.createdAt)}</div>
                 </div>
               </div>

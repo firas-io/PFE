@@ -1,6 +1,7 @@
 import { paginate }   from "@/helpers/pagination.helper.js";
 import { HabitLogs }  from "../models/HabitLog.model.js";
 import { Habits }     from "@/modules/habits/models/Habit.model.js";
+import { Users }      from "@/modules/users/models/User.model.js";
 import { AppError }   from "@/core/errors.js";
 import logger         from "@/utils/logger.util.js";
 import { ErrorsCodes, ErrorMessages } from "../constants/habit-logs.constants.js";
@@ -79,10 +80,88 @@ class HabitLogsService {
     return HabitLogs.insertOne({ ...rest, habit_id: habitId, user_id: userId });
   }
 
-  static async getAllLogs(query = {}) {
-    const page  = parseInt(query?.page)  || 1;
-    const limit = parseInt(query?.limit) || 10;
-    return paginate(HabitLogs, {}, page, limit, { sort: { createdAt: -1 } });
+  static async getAllLogs(query = {}, currentUser = {}) {
+    const page   = parseInt(query?.page)  || 1;
+    const limit  = Math.min(parseInt(query?.limit) || 50, 200);
+    const filter = {};
+
+    // Manager : restreindre aux logs de son équipe uniquement
+    // Admin (USERS_VIEW) : voir tous les logs
+    const isAdmin = (currentUser.permissions || []).includes("USERS_VIEW") ||
+                    (currentUser.permissions || []).includes("ALL");
+    if (!isAdmin && currentUser.id) {
+      const teamMembers = await Users.find({ manager_id: currentUser.id, anonymized: { $ne: true } });
+      const teamIds = teamMembers.map(u => u._id);
+      if (teamIds.length === 0) {
+        return { data: [], pagination: { total: 0, pages: 0, currentPage: page, limit, hasNext: false, hasPrev: false } };
+      }
+      filter.user_id = { $in: teamIds };
+    }
+
+    // Filtre par statut
+    if (query?.statut && query.statut !== "all") {
+      filter.statut = query.statut;
+    }
+
+    // Filtre par plage de dates
+    if (query?.dateDebut || query?.dateFin) {
+      filter.date = {};
+      if (query.dateDebut) filter.date.$gte = new Date(query.dateDebut);
+      if (query.dateFin) {
+        const end = new Date(query.dateFin);
+        end.setHours(23, 59, 59, 999);
+        filter.date.$lte = end;
+      }
+    }
+
+    // Filtre par recherche (nom utilisateur ou habitude) — résolution via IDs
+    if (query?.search?.trim()) {
+      const term  = query.search.trim();
+      const regex = new RegExp(term, "i");
+
+      const [matchedUsers, matchedHabits] = await Promise.all([
+        Users.find({ $or: [
+          { firstName: { $regex: regex } }, { prenom: { $regex: regex } },
+          { lastName:  { $regex: regex } }, { nom:    { $regex: regex } },
+          { email:     { $regex: regex } },
+        ]}),
+        Habits.find({ nom: { $regex: regex } }),
+      ]);
+
+      const userIds  = matchedUsers.map(u => u._id);
+      const habitIds = matchedHabits.map(h => h._id);
+
+      if (userIds.length === 0 && habitIds.length === 0) {
+        return { data: [], pagination: { total: 0, pages: 0, currentPage: page, limit, hasNext: false, hasPrev: false } };
+      }
+
+      filter.$or = [
+        ...(userIds.length  ? [{ user_id:  { $in: userIds  } }] : []),
+        ...(habitIds.length ? [{ habit_id: { $in: habitIds } }] : []),
+      ];
+    }
+
+    const { data: logs, pagination } = await paginate(HabitLogs, filter, page, limit, { sort: { date: -1 } });
+
+    // Enrichir avec noms en une seule passe
+    const userIds  = [...new Set(logs.map(l => l.user_id).filter(Boolean))];
+    const habitIds = [...new Set(logs.map(l => l.habit_id).filter(Boolean))];
+
+    const [users, habits] = await Promise.all([
+      userIds.length  ? Users.find({ _id: { $in: userIds } })  : [],
+      habitIds.length ? Habits.find({ _id: { $in: habitIds } }) : [],
+    ]);
+
+    const userMap  = new Map(users.map(u  => [String(u._id), `${u.firstName ?? u.prenom ?? ""} ${u.lastName ?? u.nom ?? ""}`.trim() || u.email]));
+    const habitMap = new Map(habits.map(h => [String(h._id), h.nom]));
+
+    const enriched = logs.map(log => ({
+      ...log,
+      userName: userMap.get(String(log.user_id))   ?? "Compte supprimé",
+      habitNom: habitMap.get(String(log.habit_id)) ?? `[${String(log.habit_id ?? "").slice(0, 8)}…]`,
+    }));
+
+    return { data: enriched, pagination };
   }
 
   static async getLogById(id, userId, permissions) {

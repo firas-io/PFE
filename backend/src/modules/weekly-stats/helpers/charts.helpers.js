@@ -9,6 +9,18 @@ const CATEGORY_LABELS = {
   autre: "Autre",
 };
 
+// Normalize variant spellings to a canonical slug
+const CATEGORY_NORMALIZE = {
+  "santé": "sante",
+  "bien-etre": "bien_etre",
+};
+
+function normalizeCategory(cat) {
+  if (!cat) return "autre";
+  const lower = cat.toLowerCase().trim();
+  return CATEGORY_NORMALIZE[lower] || lower;
+}
+
 const DONUT_COLORS = ["#4338CA", "#EC4899", "#0EA5E9", "#059669", "#7C3AED", "#D97706"];
 
 function _startOfDay(date) {
@@ -40,7 +52,7 @@ export function computeCompletionAverage(dailyProgress) {
 export function computeCategoriesDistribution(habits) {
   const catCount = {};
   for (const h of habits) {
-    const cat = h.categorie || "autre";
+    const cat = normalizeCategory(h.categorie);
     catCount[cat] = (catCount[cat] || 0) + 1;
   }
   const total = habits.length;
@@ -55,26 +67,30 @@ export function computeCategoriesDistribution(habits) {
     .sort((a, b) => b.count - a.count);
 }
 
-export function computeTopHabitsByCategory(habits, logs, limit = 10) {
+export function computeTopHabitsByCategory(habits, logs) {
   const completedByHabit = {};
   for (const log of logs) {
     if (log.statut !== "completee") continue;
     completedByHabit[log.habit_id] = (completedByHabit[log.habit_id] || 0) + 1;
   }
 
-  const rows = habits
-    .map(h => ({
-      habit_id:  h._id,
-      nom:       h.nom,
-      category:  h.categorie || "autre",
-      label:     categoryLabel(h.categorie || "autre"),
-      value:     completedByHabit[h._id] || 0,
-    }))
-    .filter(h => h.value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, limit);
+  // Group by category (normalized slug), deduplicate by name (sum completions across users)
+  const byCategory = {};
+  for (const h of habits) {
+    const cat = normalizeCategory(h.categorie);
+    const nom = (h.nom || "Sans nom").trim();
+    if (!byCategory[cat]) byCategory[cat] = {};
+    if (!byCategory[cat][nom]) {
+      byCategory[cat][nom] = { nom, category: cat, label: categoryLabel(cat), value: 0 };
+    }
+    byCategory[cat][nom].value += completedByHabit[h._id] || 0;
+  }
 
-  return rows;
+  const result = {};
+  for (const [cat, habitMap] of Object.entries(byCategory)) {
+    result[cat] = Object.values(habitMap).sort((a, b) => b.value - a.value);
+  }
+  return result;
 }
 
 function _countCalendarDays(periodStart, periodEnd) {

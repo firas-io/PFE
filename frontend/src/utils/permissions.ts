@@ -1,6 +1,11 @@
 /**
- * Client-side permission helpers (mirror backend role.permissions).
- * Server remains authoritative — these gates only hide UI / avoid useless navigation.
+ * Client-side permission helpers — miroir des permissions backend.
+ *
+ * RÈGLE : aucune vérification de role (user.role) ici sauf canAddNotes
+ * (qui reflète une contrainte backend enforced par rôle, sans permission dédiée).
+ * Tout le reste est 100% basé sur le tableau user.permissions[].
+ *
+ * Le backend reste autoritaire — ces helpers cachent/affichent l'UI uniquement.
  */
 
 export interface StoredAuthUser {
@@ -11,6 +16,8 @@ export interface StoredAuthUser {
   role?: string | null;
   permissions?: string[];
 }
+
+// ─── Primitives ───────────────────────────────────────────────────────────────
 
 export function hasPermission(user: StoredAuthUser | null | undefined, perm: string): boolean {
   const list = user?.permissions;
@@ -23,35 +30,34 @@ export function hasAnyPermission(user: StoredAuthUser | null | undefined, perms:
   return perms.some((p) => hasPermission(user, p));
 }
 
-const ADMIN_SHELL_PERMISSIONS = [
-  "OFF_DAYS_MANAGE", "OFFDAYS_VIEW",
-  "USERS_VIEW", "USERS_MANAGE",
-  "HABITS_MANAGE",
-  "ROLES_VIEW", "ROLES_MANAGE",
-  "MANAGERS_MANAGE",
-  "ADMIN_STATS_VIEW",
-  "TICKETS_MANAGE",
-  "CATEGORIES_MANAGE",
-];
+// ─── Accès à l'admin shell (/admin/*) ────────────────────────────────────────
+// Option A : basé uniquement sur le rôle.
+// Seuls admin et manager ont accès à /admin/*.
 
-/** Accès aux routes sous /admin. Admin/manager by role, others by explicit permissions. */
 export function canAccessAdminShell(user: StoredAuthUser | null | undefined): boolean {
-  const r = user?.role;
-  if (r === "admin" || r === "manager") return true;
-  return hasAnyPermission(user, ADMIN_SHELL_PERMISSIONS);
+  const r = user?.role?.toLowerCase();
+  return r === "admin" || r === "manager";
 }
 
-/** Gestion des comptes managers (backend: manage:Manager → MANAGERS_MANAGE). */
-export function canManageManagersCrud(user: StoredAuthUser | null | undefined): boolean {
-  return hasPermission(user, "MANAGERS_MANAGE");
+// ─── Sections du sidebar ─────────────────────────────────────────────────────
+
+/** VUE D'ENSEMBLE — tableau de bord admin global */
+export function canViewAdminDashboard(user: StoredAuthUser | null | undefined): boolean {
+  return hasPermission(user, "ADMIN_STATS_VIEW");
 }
 
-/** File complète des tickets catégories (backend: manage:Ticket). */
-export function canManageCategoryTickets(user: StoredAuthUser | null | undefined): boolean {
-  return hasPermission(user, "TICKETS_MANAGE");
+/** MON ESPACE — espace personnel (habitudes, stats perso, calendrier, progression) */
+export function canAccessMonEspace(user: StoredAuthUser | null | undefined): boolean {
+  return hasPermission(user, "HABITS_VIEW");
 }
 
-// ─── Habits ──────────────────────────────────────────────────────────────────
+/** MON ÉQUIPE — gestion de l'équipe */
+export function canAccessMonEquipe(user: StoredAuthUser | null | undefined): boolean {
+  return hasAnyPermission(user, ["MANAGER_USERS_VIEW", "MANAGER_USERS_MANAGE"]);
+}
+
+// ─── Habitudes ────────────────────────────────────────────────────────────────
+
 export function canCreateHabits(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["HABITS_CREATE", "HABITS_MANAGE"]);
 }
@@ -64,58 +70,100 @@ export function canManageHabits(user: StoredAuthUser | null | undefined): boolea
   return hasPermission(user, "HABITS_MANAGE");
 }
 
+/**
+ * Gestion des habitudes GLOBALES (page admin /admin/habits).
+ * Requiert HABITS_MANAGE + ADMIN_STATS_VIEW pour éviter que les managers
+ * (qui ont HABITS_MANAGE pour leur équipe) accèdent à la gestion globale.
+ */
+export function canManageGlobalHabits(user: StoredAuthUser | null | undefined): boolean {
+  return hasPermission(user, "HABITS_MANAGE") && hasPermission(user, "ADMIN_STATS_VIEW");
+}
+
 // ─── Logs ─────────────────────────────────────────────────────────────────────
+
 export function canViewLogs(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["LOGS_VIEW", "LOGS_MANAGE"]);
 }
 
-// ─── Stats / progress ─────────────────────────────────────────────────────────
+// ─── Statistiques & progression ───────────────────────────────────────────────
+
+/**
+ * Accès à la page statistiques équipe (/admin/stats).
+ * N'inclut PAS LOGS_VIEW pour éviter que les managers voient les stats
+ * simplement parce qu'ils ont accès aux logs.
+ */
 export function canViewStats(user: StoredAuthUser | null | undefined): boolean {
-  return hasAnyPermission(user, ["STATS_VIEW", "ADMIN_STATS_VIEW", "LOGS_VIEW"]);
+  return hasAnyPermission(user, ["STATS_VIEW", "ADMIN_STATS_VIEW"]);
 }
 
-/** Charts équipe : taux par habitude + productivité utilisateurs (admin / manager uniquement). */
+/**
+ * Accès aux graphiques analytiques d'équipe (charts, taux, productivité).
+ * Purement basé sur les permissions — aucune vérification de rôle.
+ */
 export function canViewTeamAnalytics(user: StoredAuthUser | null | undefined): boolean {
-  const r = user?.role;
-  if (r === "admin" || r === "manager") return true;
-  return hasAnyPermission(user, ["ADMIN_STATS_VIEW", "MANAGER_USERS_VIEW"]);
+  return hasAnyPermission(user, ["ADMIN_STATS_VIEW", "MANAGER_USERS_VIEW", "STATS_VIEW"]);
 }
 
 export function canViewProgress(user: StoredAuthUser | null | undefined): boolean {
   return hasPermission(user, "PROGRESS_VIEW");
 }
 
-// ─── Users ────────────────────────────────────────────────────────────────────
+// ─── Utilisateurs ─────────────────────────────────────────────────────────────
+
 export function canViewUsers(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["USERS_VIEW", "MANAGERS_MANAGE"]);
 }
 
-// ─── Off-days ─────────────────────────────────────────────────────────────────
+// ─── Managers ─────────────────────────────────────────────────────────────────
+
+export function canManageManagersCrud(user: StoredAuthUser | null | undefined): boolean {
+  return hasPermission(user, "MANAGERS_MANAGE");
+}
+
+// ─── Jours off ────────────────────────────────────────────────────────────────
+
 export function canViewOffDays(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["OFFDAYS_VIEW", "OFF_DAYS_MANAGE"]);
 }
 
 export function canManageOffDays(user: StoredAuthUser | null | undefined): boolean {
-  return hasAnyPermission(user, ["OFF_DAYS_MANAGE", "OFFDAYS_VIEW"]);
+  return hasPermission(user, "OFF_DAYS_MANAGE");
 }
 
 export function canAddOffDays(user: StoredAuthUser | null | undefined): boolean {
   return hasPermission(user, "OFF_DAYS_MANAGE");
 }
 
-// ─── Roles ────────────────────────────────────────────────────────────────────
+// ─── Rôles ────────────────────────────────────────────────────────────────────
+
 export function canViewRoles(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["ROLES_VIEW", "ROLES_MANAGE"]);
 }
 
-// ─── Categories ───────────────────────────────────────────────────────────────
+// ─── Catégories ───────────────────────────────────────────────────────────────
+
+/** Vue générale des catégories (dropdown, sélection) */
 export function canViewCategories(user: StoredAuthUser | null | undefined): boolean {
   return hasAnyPermission(user, ["CATEGORIES_VIEW", "CATEGORIES_MANAGE"]);
 }
 
+/** Gestion admin des catégories (/admin/categories) — CATEGORIES_MANAGE requis */
+export function canManageCategories(user: StoredAuthUser | null | undefined): boolean {
+  return hasPermission(user, "CATEGORIES_MANAGE");
+}
+
+// ─── Tickets ──────────────────────────────────────────────────────────────────
+
+export function canManageCategoryTickets(user: StoredAuthUser | null | undefined): boolean {
+  return hasPermission(user, "TICKETS_MANAGE");
+}
+
 // ─── Notes ────────────────────────────────────────────────────────────────────
-/** Managers ne peuvent pas ajouter/modifier les notes d'habitudes. */
+/**
+ * Exception : vérifie le rôle car le backend bloque les managers au niveau du rôle
+ * sans permission dédiée. Ce helper reflète fidèlement la contrainte backend.
+ */
 export function canAddNotes(user: StoredAuthUser | null | undefined): boolean {
   if (!user) return false;
-  return (user.role?.toLowerCase() ?? '') !== 'manager';
+  return (user.role?.toLowerCase() ?? "") !== "manager";
 }

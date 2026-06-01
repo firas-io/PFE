@@ -9,7 +9,6 @@ import { userFirstName } from "@/lib/userDisplay";
 import { useToast } from "@/components/Toast";
 import { HabitItem, type HabitProgressItem } from "../_components/HabitItem";
 import DateFilter, { type DateFilterValue } from "@/components/DateFilter";
-import GlobalHabitCard from "@/components/GlobalHabitCard";
 
 interface GlobalHabit {
   _id: string;
@@ -105,8 +104,6 @@ export default function DashboardHome() {
   const [loading,  setLoading]  = useState(true);
   const [togglingHabitId, setTogglingHabitId] = useState<string | null>(null);
   const [user, setUser] = useState<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; permissions?: string[] } | null>(null);
-  const [globalHabits, setGlobalHabits] = useState<GlobalHabit[]>([]);
-
   const loadProgress = (range?: DateFilterValue | null) => {
     const params = new URLSearchParams();
     if (range?.dateFrom) params.set('dateFrom', range.dateFrom);
@@ -114,9 +111,6 @@ export default function DashboardHome() {
     const query = params.toString() ? `?${params}` : '';
     return apiFetch<ProgressData>(`/progress/my${query}`);
   };
-
-  const loadGlobalHabits = () =>
-    apiFetch<GlobalHabit[]>("/habits/global").then(setGlobalHabits).catch(() => {});
 
   useEffect(() => {
     const stored = getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; permissions?: string[] }>();
@@ -128,7 +122,6 @@ export default function DashboardHome() {
       .then(([p, t]) => { setProgress(p); setToday(t); })
       .catch(console.error)
       .finally(() => setLoading(false));
-    loadGlobalHabits();
   }, []);
 
   function handleDateChange(range: DateFilterValue) {
@@ -280,26 +273,6 @@ export default function DashboardHome() {
       {/* ── Date filter ─────────────────────────────────────── */}
       <DateFilter onChange={handleDateChange} />
 
-      {/* ── Global habits ───────────────────────────────────── */}
-      {globalHabits.length > 0 && (
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-            <div>
-              <h2 style={{ fontSize: 17, fontWeight: 800, color: '#1E1B4B', margin: 0 }}>
-                Habitudes disponibles
-              </h2>
-              <p style={{ fontSize: 12, color: '#64748B', marginTop: 3 }}>
-                Activez les habitudes proposées par l&apos;administration
-              </p>
-            </div>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 8 }}>
-            {globalHabits.map(habit => (
-              <GlobalHabitCard key={habit._id} habit={habit} onRefresh={loadGlobalHabits} />
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* ── Content grid ────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>

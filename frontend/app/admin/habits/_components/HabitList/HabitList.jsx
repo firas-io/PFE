@@ -36,6 +36,7 @@ export const HabitList = () => {
   const [pagination, setPagination] = useState({ pages: 1, currentPage: 1 });
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [visibilityFilter, setVisibilityFilter] = useState('all');
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showAddModal, setShowAddModal] = useState(false);
@@ -49,6 +50,7 @@ export const HabitList = () => {
     try {
       const showActiveOnly = searchParams?.get('active') === 'true';
       const filterStatut = showActiveOnly ? 'active' : (statusFilter !== 'all' ? statusFilter : undefined);
+      const filterVisibility = visibilityFilter !== 'all' ? visibilityFilter : undefined;
 
       if (debouncedSearch) {
         const result = await searchHabits({
@@ -57,11 +59,14 @@ export const HabitList = () => {
           limit: 5,
           includeArchived: true,
           statut: filterStatut,
+          visibility: filterVisibility,
         });
         setHabits(result.data ?? []);
         setPagination(result.pagination ?? { pages: 1, currentPage: page });
       } else {
         const params = new URLSearchParams({ includeArchived: 'true', page: String(page), limit: '5' });
+        if (filterStatut)    params.set('statut',     filterStatut);
+        if (filterVisibility) params.set('visibility', filterVisibility);
         const result = await apiFetch(`/habits?${params}`);
         if (result && result.data) {
           setHabits(result.data);
@@ -75,7 +80,7 @@ export const HabitList = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, statusFilter, searchParams]);
+  }, [debouncedSearch, statusFilter, visibilityFilter, searchParams]);
 
   useEffect(() => { setToken(getToken()); setCurrentUser(getUser()); }, []);
   useEffect(() => {
@@ -83,7 +88,7 @@ export const HabitList = () => {
       setCurrentPage(1);
       refresh(1);
     }
-  }, [token, debouncedSearch, statusFilter, refresh]);
+  }, [token, debouncedSearch, statusFilter, visibilityFilter, refresh]);
 
   function handlePageChange(page) {
     setCurrentPage(page);
@@ -99,6 +104,7 @@ export const HabitList = () => {
         list = list.filter((h) => (h.statut || 'active') === filterStatut);
       }
     }
+
     if (sortBy === 'priority_desc') list.sort((a, b) => priorityRank(b.priorite) - priorityRank(a.priorite));
     else if (sortBy === 'priority_asc') list.sort((a, b) => priorityRank(a.priorite) - priorityRank(b.priorite));
     else if (sortBy === 'status') list.sort((a, b) => statusRank(a.statut) - statusRank(b.statut));
@@ -115,6 +121,8 @@ export const HabitList = () => {
       <HabitHeader
         statusFilter={statusFilter}
         setStatusFilter={setStatusFilter}
+        visibilityFilter={visibilityFilter}
+        setVisibilityFilter={setVisibilityFilter}
         search={search}
         setSearch={setSearch}
         sortBy={sortBy}

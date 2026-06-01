@@ -5,7 +5,7 @@ import { IconPlus } from '@tabler/icons-react';
 export const ManagerHeader = ({ total, loading, onOpenCreate }) => (
   <div className="adm-header">
     <div>
-      <h1 className="adm-title">Managers</h1>
+      <h1 className="adm-title">Managers gg</h1>
       <p className="adm-subtitle">{loading ? 'Chargement…' : `${total} manager${total !== 1 ? 's' : ''} au total`}</p>
     </div>
     <div className="adm-header-actions">

@@ -15,6 +15,7 @@ import { AddHabitModal } from '../AddHabitModal';
 import { UpdateHabitModal } from '../UpdateHabitModal';
 import { NotesModal } from '../NotesModal';
 import { NoteHistoryModal } from '../NoteHistoryModal';
+import { PersonalizeModal } from '../PersonalizeModal/PersonalizeModal';
 
 export const HabitList = () => {
   const { toast } = useToast();
@@ -48,6 +49,8 @@ export const HabitList = () => {
   const [noteHistory, setNoteHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
   const [weeklyCompletionMap, setWeeklyCompletionMap] = useState({});
+
+  const [personalizeHabit, setPersonalizeHabit] = useState(null);
 
   // Load user + permissions; sync selected category slugs from API
   useEffect(() => {
@@ -339,15 +342,36 @@ export const HabitList = () => {
 
   const handleSaveNotes = async (notes) => {
     if (!notesHabit) return;
+    const isGlobal = !!(notesHabit.is_global || notesHabit.created_by_admin);
     setBusy(true);
     try {
-      await apiFetch(`/habits/${notesHabit._id}/notes`, { method: 'PATCH', body: JSON.stringify({ note: notes || undefined }) });
+      const endpoint = isGlobal
+        ? `/habits/${notesHabit._id}/my-settings`
+        : `/habits/${notesHabit._id}/notes`;
+      await apiFetch(endpoint, { method: 'PATCH', body: JSON.stringify({ note: notes || undefined }) });
       await loadHabits();
       setShowNotes(false);
       setNotesHabit(null);
       toast({ variant: 'success', title: 'Notes sauvegardées' });
     } catch (err) {
       toast({ variant: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Erreur lors de la sauvegarde des notes' });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePersonalize = async (habitId, settings) => {
+    setBusy(true);
+    try {
+      await apiFetch(`/habits/${habitId}/my-settings`, {
+        method: 'PATCH',
+        body: JSON.stringify(settings),
+      });
+      await loadHabits();
+      setPersonalizeHabit(null);
+      toast({ variant: 'success', title: 'Personnalisation sauvegardée' });
+    } catch (err) {
+      toast({ variant: 'error', title: 'Erreur', description: err instanceof Error ? err.message : 'Erreur lors de la personnalisation' });
     } finally {
       setBusy(false);
     }
@@ -407,6 +431,7 @@ export const HabitList = () => {
           onArchive={handleArchive}
           onToggleDay={handleToggleDay}
           onNotes={canNotes ? handleOpenNotes : undefined}
+          onPersonalize={(habit) => setPersonalizeHabit(habit)}
           onUpdateDate={handleUpdateDate}
           weeklyCompletionMap={weeklyCompletionMap}
           todayIndex={todayIndex}
@@ -445,6 +470,15 @@ export const HabitList = () => {
           show={showHistory}
           history={noteHistory}
           onClose={() => setShowHistory(false)}
+        />
+      )}
+
+      {personalizeHabit && (
+        <PersonalizeModal
+          habit={personalizeHabit}
+          onClose={() => setPersonalizeHabit(null)}
+          onSave={(settings) => handlePersonalize(personalizeHabit._id, settings)}
+          saving={busy}
         />
       )}
     </div>

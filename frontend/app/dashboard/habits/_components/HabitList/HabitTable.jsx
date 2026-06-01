@@ -15,6 +15,7 @@ export const HabitTable = ({
   onArchive,
   onToggleDay,
   onNotes,
+  onPersonalize,
   onUpdateDate,
   weeklyCompletionMap,
   todayIndex,
@@ -57,6 +58,7 @@ export const HabitTable = ({
             onArchive={onArchive}
             onToggleDay={onToggleDay}
             onNotes={onNotes}
+            onPersonalize={onPersonalize}
             onUpdateDate={onUpdateDate}
             canManage={canManage}
             canNotes={canNotes}

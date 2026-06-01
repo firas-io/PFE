@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Archive, CalendarDays, Check, ChevronDown,
-  Copy, FileText, Flame, MoreHorizontal, Pause, Pencil, Play,
+  Copy, FileText, Flame, MoreHorizontal, Pause, Pencil, Play, Settings,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useCategories } from '@/hooks/useCategories';
@@ -101,6 +101,7 @@ export function HabitCard({
   onTogglePause,
   onArchive,
   onNotes,
+  onPersonalize,
   onUpdateDate,
   onToggleDay,
   canManage = true,
@@ -266,6 +267,11 @@ export function HabitCard({
                 {canManage && !isGlobal && (
                   <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F5F3FF'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onEdit(habit); }}>
                     <Pencil size={14} style={{ color: '#6366F1' }} /> Modifier
+                  </button>
+                )}
+                {isGlobal && onPersonalize && (
+                  <button type="button" style={MI()} onMouseEnter={e=>e.currentTarget.style.background='#F5F3FF'} onMouseLeave={e=>e.currentTarget.style.background='none'} onClick={() => { setMenuOpen(false); onPersonalize(habit); }}>
+                    <Settings size={14} style={{ color: '#6366F1' }} /> Personnaliser
                   </button>
                 )}
                 {canManage && (

@@ -12,7 +12,7 @@ const StatusBadge = ({ statut }) => {
 const VisibilityBadge = ({ visible }) =>
   visible
     ? <span className="adm-status adm-status--team">Public</span>
-    : <span className="adm-status adm-status--personal">Admin</span>;
+    : <span className="adm-status adm-status--personal">Privé</span>;
 
 export const HabitTable = ({ habits, loading, onEdit, onRefetch, canManage }) => {
   if (loading) {
