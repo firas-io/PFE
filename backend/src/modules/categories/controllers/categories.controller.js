@@ -2,6 +2,7 @@ import { StatusCodes as httpStatus } from "http-status-codes";
 import CategoriesService             from "../services/categories.service.js";
 import { getCategory }               from "@/shared/constants/categories.js";
 import { Users }                     from "@/modules/users/models/User.model.js";
+import { UserCategoryPreferences }   from "@/modules/users/models/UserCategoryPreference.model.js";
 
 const _h = (fn) => async (req, reply) => {
   try   { return await fn(req, reply); }
@@ -50,13 +51,13 @@ const getBySlug = _h(async (req, reply) => {
   reply.code(404).send({ code: "CAT-003", message: "Catégorie introuvable" });
 });
 
-// GET /categories/available-for-user — active categories NOT yet in user.categories
+// GET /categories/available-for-user — active categories NOT yet selected by user
 const availableForUser = _h(async (req, reply) => {
-  const [dbCategories, user] = await Promise.all([
+  const [dbCategories, selectedSlugs] = await Promise.all([
     CategoriesService.getActive(),
-    Users.findById(req.user.id),
+    UserCategoryPreferences.getSlugsForUser(req.user.id),
   ]);
-  const selectedLower = new Set((user?.categories ?? []).map((s) => String(s).toLowerCase()));
+  const selectedLower = new Set(selectedSlugs.map((s) => String(s).toLowerCase()));
   const available = dbCategories.filter(
     (c) => c.slug !== "autre" && !selectedLower.has(String(c.slug).toLowerCase())
   );
