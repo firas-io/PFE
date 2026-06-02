@@ -5,12 +5,10 @@ import { getFirstName, getLastName } from "@/modules/users/utils/user-fields.js"
 const _ldapEnabled = () => String(process.env.LDAP_ENABLED || "false").toLowerCase() === "true";
 
 async function sendLoginSuccess(reply, { user, role, onboardingPending, isFirstLogin }) {
-  const uid          = String(user._id);
-  const accessToken  = await reply.jwtSign({ id: uid, email: user.email, role: role.nom, permissions: role.permissions || [] });
-  const refreshToken = await AuthService.createRefreshToken(uid);
+  const uid         = String(user._id);
+  const accessToken = await reply.jwtSign({ id: uid, email: user.email, role: role.nom, permissions: role.permissions || [] });
   reply.send({
     accessToken,
-    refreshToken,
     onboardingPending,
     isFirstLogin: isFirstLogin ?? onboardingPending,
     user: {
@@ -64,34 +62,5 @@ const authConfig = async (_req, reply) => {
 
 const getProfile = async (req) => req.user;
 
-const refresh = async (req, reply) => {
-  try {
-    const { refreshToken } = req.body;
-    const result = await AuthService.refreshAccessToken(refreshToken, reply.jwtSign.bind(reply));
-    reply.send(result);
-  } catch (err) {
-    reply.code(err.statusCode || httpStatus.INTERNAL_SERVER_ERROR).send({ code: err.code, message: err.message });
-  }
-};
-
-const logout = async (req, reply) => {
-  try {
-    const { refreshToken } = req.body;
-    await AuthService.logout(refreshToken);
-    reply.code(httpStatus.NO_CONTENT).send();
-  } catch (err) {
-    reply.code(err.statusCode || httpStatus.INTERNAL_SERVER_ERROR).send({ code: err.code, message: err.message });
-  }
-};
-
-const logoutAll = async (req, reply) => {
-  try {
-    await AuthService.logoutAll(req.user.id);
-    reply.code(httpStatus.NO_CONTENT).send();
-  } catch (err) {
-    reply.code(err.statusCode || httpStatus.INTERNAL_SERVER_ERROR).send({ code: err.code, message: err.message });
-  }
-};
-
-const AuthController = { register, login, loginLdap, authConfig, getProfile, refresh, logout, logoutAll };
+const AuthController = { register, login, loginLdap, authConfig, getProfile };
 export default AuthController;

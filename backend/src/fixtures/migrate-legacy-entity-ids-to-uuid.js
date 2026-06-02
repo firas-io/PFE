@@ -46,25 +46,9 @@ async function replaceRootIdFreeingUniqueField(coll, doc, newId, uniqueField) {
   await coll.deleteOne({ _id: oldId });
 }
 
-async function patchWeeklyRecapHabitIds(db, oldId, newId) {
-  const paths = ["stats.bestHabit.habitId", "stats.worstHabit.habitId", "stats.streakHighlight.habitId"];
-  for (const pathKey of paths) {
-    for (const v of [oldId, String(oldId)]) {
-      const r = await db.collection("weekly_recaps").updateMany({ [pathKey]: v }, { $set: { [pathKey]: newId } });
-      if (r.modifiedCount) {
-        logger.info({ coll: "weekly_recaps", path: pathKey, n: r.modifiedCount }, "Weekly recap stats habitId rewritten");
-      }
-    }
-  }
-}
-
 async function rewriteHabitIdAcross(client, primary, oldId, newId) {
   await rewriteField(primary, "habit_logs", "habit_id", oldId, newId, { phase: "habits" });
   await rewriteField(primary, "habit_stats", "habit_id", oldId, newId, { phase: "habits" });
-  await rewriteField(primary, "habit_note_histories", "habit_id", oldId, newId, { phase: "habits" });
-  const remDb = getDbForCollection(client, "reminders", primary);
-  await rewriteField(remDb, "reminders", "habit_id", oldId, newId, { phase: "habits" });
-  await patchWeeklyRecapHabitIds(primary, oldId, newId);
 }
 
 async function migrateRoles(client, primary) {
@@ -94,17 +78,6 @@ async function migrateCategoryTickets(client, primary) {
   }
 }
 
-async function migrateHabitTemplates(_client, primary) {
-  const col = primary.collection("habit_templates");
-  const legacy = await col.find({ _id: OID }).toArray();
-  for (const doc of legacy) {
-    const newId = uuid();
-    await replaceRootIdFreeingUniqueField(col, doc, newId, "nom_template");
-  }
-  if (legacy.length) {
-    logger.info({ action: "migrate-entity-ids", phase: "habit_templates", count: legacy.length }, "Habit template _id migrated to UUID");
-  }
-}
 
 async function migrateHabits(client, primary) {
   const col = primary.collection("habits");
@@ -140,14 +113,12 @@ export async function migrateLegacyEntityIdsToUuid() {
 
   await migrateRoles(client, primary);
   await migrateCategoryTickets(client, primary);
-  await migrateHabitTemplates(client, primary);
   await migrateHabits(client, primary);
 
   await migrateRootIdsOnly(client, primary, "habit_logs");
   await migrateRootIdsOnly(client, primary, "habit_stats");
   await migrateRootIdsOnly(client, primary, "habit_note_histories");
   await migrateRootIdsOnly(client, primary, "reminders");
-  await migrateRootIdsOnly(client, primary, "weekly_recaps");
   await migrateRootIdsOnly(client, primary, "admin_stats");
   await migrateRootIdsOnly(client, primary, "refresh_tokens");
   await migrateRootIdsOnly(client, primary, "sessions");

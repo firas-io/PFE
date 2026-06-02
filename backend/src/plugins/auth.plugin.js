@@ -38,10 +38,6 @@ const ABILITY_MAP = {
   "manage:ManagerUser":   ["MANAGER_USERS_MANAGE"],
   "read:Role":            ["ROLES_VIEW"],
   "manage:Role":          ["ROLES_MANAGE"],
-  "read:Reminder":        ["REMINDERS_VIEW"],
-  "manage:Reminder":      ["REMINDERS_MANAGE"],
-  "read:Session":         ["SESSIONS_VIEW"],
-  "manage:Session":       ["SESSIONS_MANAGE"],
   "read:Onboarding":      ["ONBOARDING_VIEW"],
   "manage:Onboarding":    ["ONBOARDING_MANAGE"],
   "manage:OffDay":        ["OFF_DAYS_MANAGE"],
@@ -49,7 +45,6 @@ const ABILITY_MAP = {
   "read:Stats":           ["STATS_VIEW"],
   "read:Log":             ["LOGS_VIEW"],
   "manage:Ticket":        ["TICKETS_MANAGE"],
-  "read:AdminStats":      ["ADMIN_STATS_VIEW"],
   "read:Category":        ["CATEGORIES_VIEW"],
   "manage:Category":      ["CATEGORIES_MANAGE"],
 };
@@ -59,7 +54,7 @@ async function jwtPlugin(fastify) {
     (await import("@fastify/jwt")).default,
     {
       secret: process.env.JWT_SECRET || "supersecretkey_changez_moi",
-      sign:   { expiresIn: process.env.JWT_EXPIRES_IN || "15m" }
+      sign:   { expiresIn: process.env.JWT_EXPIRES_IN || "24h" }
     }
   );
 

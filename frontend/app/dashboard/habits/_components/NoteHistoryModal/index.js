@@ -1,1 +1,0 @@
-export { NoteHistoryModal } from './NoteHistoryModal';

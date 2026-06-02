@@ -1,5 +1,5 @@
 import AuthController from "../controllers/auth.controller.js";
-import { registerSchema, loginSchema, loginLdapSchema, refreshSchema, logoutSchema } from "../validations/auth.validation.js";
+import { registerSchema, loginSchema, loginLdapSchema } from "../validations/auth.validation.js";
 
 const register = (server) => ({
   method: "POST", url: "/register",
@@ -34,26 +34,7 @@ const getProfile = (server) => ({
   handler: AuthController.getProfile,
 });
 
-const refresh = (server) => ({
-  method: "POST", url: "/refresh",
-  schema:  refreshSchema,
-  config:  { rateLimit: { max: 10, timeWindow: "1 minute" } },
-  handler: AuthController.refresh,
-});
-
-const logout = (server) => ({
-  method: "POST", url: "/logout",
-  schema:  logoutSchema,
-  handler: AuthController.logout,
-});
-
-const logoutAll = (server) => ({
-  method: "POST", url: "/logout-all",
-  preHandler: server.auth([server.verifyAccessToken]),
-  handler: AuthController.logoutAll,
-});
-
-const routes = [authConfig, register, login, loginLdap, getProfile, refresh, logout, logoutAll];
+const routes = [authConfig, register, login, loginLdap, getProfile];
 
 export default async function authRoutes(fastify) {
   routes.forEach(r => fastify.route(r(fastify)));

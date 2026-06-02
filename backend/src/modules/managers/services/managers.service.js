@@ -2,7 +2,6 @@ import bcrypt        from "bcrypt";
 import { paginate }  from "@/helpers/pagination.helper.js";
 import { Users }     from "@/modules/users/models/User.model.js";
 import { Roles }     from "@/modules/roles/models/Role.model.js";
-import { HabitNoteHistories } from "@/modules/habits/models/HabitNoteHistory.model.js";
 import { Habits }             from "@/modules/habits/models/Habit.model.js";
 import { UserHabitSettings }  from "@/modules/habits/models/UserHabitSettings.model.js";
 import HabitsService from "@/modules/habits/services/habits.service.js";

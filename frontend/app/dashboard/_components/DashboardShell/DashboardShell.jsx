@@ -27,7 +27,7 @@ import {
   IconUsersGroup,
   IconSettings,
 } from '@tabler/icons-react';
-import { clearAuth, getRefreshToken, getUser, setUser as storeUser } from '@/lib/auth';
+import { clearAuth, getUser, setUser as storeUser } from '@/lib/auth';
 import { userFirstName, userLastName } from '@/lib/userDisplay';
 import {
   canAccessAdminShell,
@@ -99,15 +99,7 @@ export const DashboardShell = ({ children }) => {
       .catch(() => {});
   }, []);
 
-  const logout = async () => {
-    const rt = getRefreshToken();
-    if (rt) {
-      fetch(`${API_BASE}/logout`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: rt }),
-      }).catch(() => {});
-    }
+  const logout = () => {
     clearAuth();
     router.push('/login');
   };

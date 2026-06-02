@@ -339,6 +339,7 @@ export function ManagersUsers() {
         <IconUserOff size={15} />
       </button>
     </div>
+   
   );
 
   const renderUserActions = (u) => (

@@ -4,17 +4,13 @@ import { parseSearchQuery }  from "@/helpers/search.helper.js";
 import { Users }             from "../models/User.model.js";
 import { Roles }             from "@/modules/roles/models/Role.model.js";
 import { addLdapUser }       from "@/modules/auth/services/ldap.service.js";
-import { RefreshTokens }     from "@/modules/auth/models/RefreshToken.model.js";
-import { Sessions }          from "@/modules/sessions/models/Session.model.js";
 import { Onboardings }       from "@/modules/onboarding/models/Onboarding.model.js";
-import { WeeklyRecaps }      from "@/modules/weekly-recap/models/WeeklyRecap.model.js";
-import { HabitNoteHistories } from "@/modules/habits/models/HabitNoteHistory.model.js";
-import { Reminders }         from "@/modules/reminders/models/Reminder.model.js";
 import { HabitStats }        from "@/modules/habit-stats/models/HabitStats.model.js";
 import { HabitLogs }         from "@/modules/habit-logs/models/HabitLog.model.js";
 import { Habits }            from "@/modules/habits/models/Habit.model.js";
 import { CategoryTickets }   from "@/modules/category-tickets/models/CategoryTicket.model.js";
-import CategoriesService     from "@/modules/categories/services/categories.service.js";
+import CategoriesService          from "@/modules/categories/services/categories.service.js";
+import { UserCategoryPreferences } from "../models/UserCategoryPreference.model.js";
 import { AppError }          from "@/core/errors.js";
 import logger                from "@/utils/logger.util.js";
 import { ErrorsCodes, ErrorMessages, SYSTEM_ARCHIVED_USER_ID } from "../constants/users.constants.js";
@@ -165,44 +161,9 @@ class UsersService {
 
     const STEPS = [
       {
-        name: "refresh_tokens", key: "tokens_revoked",
-        run: async () => {
-          const r = await RefreshTokens.revokeAllForUser(id);
-          return r.modifiedCount ?? 0;
-        },
-      },
-      {
-        name: "sessions", key: "sessions_purged",
-        run: async () => {
-          const r = await Sessions.deleteMany({ user_id: id });
-          return r.deletedCount ?? 0;
-        },
-      },
-      {
         name: "onboardings", key: "onboardings_purged",
         run: async () => {
           const r = await Onboardings.deleteMany({ user_id: id });
-          return r.deletedCount ?? 0;
-        },
-      },
-      {
-        name: "weekly_recaps", key: "recaps_purged",
-        run: async () => {
-          const r = await WeeklyRecaps.deleteMany({ user_id: id });
-          return r.deletedCount ?? 0;
-        },
-      },
-      {
-        name: "habit_note_histories", key: "notes_purged",
-        run: async () => {
-          const r = await HabitNoteHistories.deleteMany({ user_id: id });
-          return r.deletedCount ?? 0;
-        },
-      },
-      {
-        name: "reminders", key: "reminders_purged",
-        run: async () => {
-          const r = await Reminders.deleteMany({ user_id: id });
           return r.deletedCount ?? 0;
         },
       },
@@ -377,12 +338,16 @@ class UsersService {
   static async getMyCategories(userId) {
     const user = await Users.findById(userId);
     if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
-    return { categories: user.categories ?? [] };
+    const slugs = await UserCategoryPreferences.getSlugsForUser(userId);
+    return { categories: slugs };
   }
 
   static async addMyCategories(userId, slugs) {
     if (!Array.isArray(slugs) || slugs.length === 0)
       throw new AppError("Au moins un slug de catégorie est requis.", 400, "CAT_SLUGS_REQUIRED");
+
+    const user = await Users.findById(userId);
+    if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
 
     const invalid = [];
     const resolved = [];
@@ -391,21 +356,25 @@ class UsersService {
       if (!slug) invalid.push(raw);
       else resolved.push(slug);
     }
-    if (invalid.length > 0) {
+    if (invalid.length > 0)
       throw new AppError(
-        `Catégorie(s) introuvable(s) ou inactive(s) : ${invalid.join(", ")}. Vérifiez qu'elles existent et sont actives dans l'admin.`,
-        400,
-        "INVALID_CATEGORY"
+        `Catégorie(s) introuvable(s) ou inactive(s) : ${invalid.join(", ")}.`,
+        400, "INVALID_CATEGORY"
       );
+
+    for (const slug of resolved) {
+      const exists = await UserCategoryPreferences.findByUserAndSlug(userId, slug);
+      if (!exists) {
+        await UserCategoryPreferences.insertOne({
+          user_id:       userId,
+          category_slug: slug,
+          created_at:    new Date(),
+        });
+      }
     }
 
-    const user = await Users.findById(userId);
-    if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
-
-    const existing = user.categories ?? [];
-    const merged   = [...new Set([...existing, ...resolved])];
-    await Users.updateOne({ _id: userId }, { $set: { categories: merged } });
-    return { categories: merged };
+    const allSlugs = await UserCategoryPreferences.getSlugsForUser(userId);
+    return { categories: allSlugs };
   }
 
   static async removeMyCategory(userId, slug) {
@@ -416,16 +385,17 @@ class UsersService {
     const user = await Users.findById(userId);
     if (!user) throw new AppError(ErrorMessages[ErrorsCodes.USER_NOT_FOUND], 404, ErrorsCodes.USER_NOT_FOUND);
 
-    const existing = user.categories ?? [];
-    if (!existing.includes(resolved))
+    const pref = await UserCategoryPreferences.findByUserAndSlug(userId, resolved);
+    if (!pref)
       throw new AppError("Cette catégorie ne fait pas partie de vos catégories.", 400, "CAT_NOT_SELECTED");
 
-    if (existing.length <= 1)
+    const total = await UserCategoryPreferences.count({ user_id: userId });
+    if (total <= 1)
       throw new AppError("Vous devez conserver au moins une catégorie.", 400, "CAT_MIN_ONE");
 
-    const updated = existing.filter(s => s !== resolved);
-    await Users.updateOne({ _id: userId }, { $set: { categories: updated } });
-    return { categories: updated };
+    await UserCategoryPreferences.deleteOne({ _id: pref._id });
+    const allSlugs = await UserCategoryPreferences.getSlugsForUser(userId);
+    return { categories: allSlugs };
   }
 }
 

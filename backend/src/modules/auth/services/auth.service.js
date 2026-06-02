@@ -3,14 +3,11 @@ import crypto          from "crypto";
 import { Users }       from "@/modules/users/models/User.model.js";
 import { Roles }       from "@/modules/roles/models/Role.model.js";
 import { Onboardings } from "@/modules/onboarding/models/Onboarding.model.js";
-import { RefreshTokens } from "../models/RefreshToken.model.js";
 import { AppError }    from "@/core/errors.js";
 import logger          from "@/utils/logger.util.js";
 import { authenticateUser, lookupUserByDn } from "./ldap.service.js";
 import { ErrorsCodes, ErrorMessages } from "../constants/auth.constants.js";
 import { getFirstName, getLastName, getPasswordHash } from "@/modules/users/utils/user-fields.js";
-
-const REFRESH_TTL_DAYS = 7;
 
 /** Escape email for safe case-insensitive exact match in MongoDB $regex. */
 function _emailRegexExact(email) {
@@ -106,7 +103,6 @@ class AuthService {
           role_id:      managerRole._id,
           isActive:     true,
           isFirstLogin: true,
-          categories:   [],
         });
 
         logger.info({ action: "ldap-auto-create-manager", email: ldapManager.email }, "Manager auto-created from LDAP DN");
@@ -142,7 +138,6 @@ class AuthService {
       role_id: userRole._id,
       isActive: true,
       isFirstLogin: true,
-      categories: [],
     });
 
     logger.info({ action: "register", email }, "User registered");
@@ -273,92 +268,6 @@ class AuthService {
     return { user, role, onboardingPending, isFirstLogin };
   }
 
-  /** Generate and persist a new opaque refresh token. Returns the plain token. */
-  static async createRefreshToken(userId) {
-    const plain     = crypto.randomBytes(40).toString("hex");
-    const hash      = crypto.createHash("sha256").update(plain).digest("hex");
-    const expiresAt = new Date(Date.now() + REFRESH_TTL_DAYS * 24 * 60 * 60 * 1000);
-    await RefreshTokens.create({ user_id: userId, token_hash: hash, expires_at: expiresAt });
-    return plain;
-  }
-
-  /**
-   * Validate an incoming refresh token, rotate it, and return a new access token + refresh token.
-   *
-   * Security flow:
-   *   1. Look up the token regardless of revocation state.
-   *   2. If the token exists but is already revoked → reuse detected → revoke ALL sessions for that user.
-   *   3. If the token exists, is active but expired → AUTH-010.
-   *   4. If the token is active and valid → revoke it, issue new pair (rotation).
-   */
-  static async refreshAccessToken(plainToken, jwtSign) {
-    if (!plainToken)
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_MISSING], 400, ErrorsCodes.REFRESH_TOKEN_MISSING);
-
-    const hash   = crypto.createHash("sha256").update(plainToken).digest("hex");
-    const stored = await RefreshTokens.findByHash(hash);
-
-    if (!stored)
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_INVALID], 401, ErrorsCodes.REFRESH_TOKEN_INVALID);
-
-    if (stored.revoked_at !== null) {
-      await RefreshTokens.revokeAllForUser(stored.user_id);
-      logger.warn({ action: "token-reuse-detected", userId: stored.user_id }, "Refresh token reuse — all sessions revoked");
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_REUSE], 401, ErrorsCodes.REFRESH_TOKEN_REUSE);
-    }
-
-    if (stored.expires_at < new Date())
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_EXPIRED], 401, ErrorsCodes.REFRESH_TOKEN_EXPIRED);
-
-    const user = await Users.findById(stored.user_id);
-    if (!user || !user.isActive)
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_INVALID], 401, ErrorsCodes.REFRESH_TOKEN_INVALID);
-
-    const role = user.role_id ? await Roles.findById(user.role_id) : null;
-    if (!role)
-      throw new AppError(ErrorMessages[ErrorsCodes.ROLE_NOT_CONFIGURED], 500, ErrorsCodes.ROLE_NOT_CONFIGURED);
-
-    await RefreshTokens.revokeById(stored._id);
-
-    const uid          = String(user._id);
-    const accessToken  = await jwtSign({ id: uid, email: user.email, role: role.nom, permissions: role.permissions || [] });
-    const refreshToken = await AuthService.createRefreshToken(uid);
-
-    logger.info({ action: "token-refresh", userId: uid }, "Tokens rotated");
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        _id:         uid,
-        firstName:   getFirstName(user),
-        lastName:    getLastName(user),
-        email:       user.email,
-        role:        role.nom,
-        permissions: role.permissions || [],
-      },
-    };
-  }
-
-  /** Revoke a single refresh token (logout from current device). */
-  static async logout(plainToken) {
-    if (!plainToken)
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_MISSING], 400, ErrorsCodes.REFRESH_TOKEN_MISSING);
-
-    const hash   = crypto.createHash("sha256").update(plainToken).digest("hex");
-    const stored = await RefreshTokens.findActive(hash);
-
-    if (!stored)
-      throw new AppError(ErrorMessages[ErrorsCodes.REFRESH_TOKEN_INVALID], 401, ErrorsCodes.REFRESH_TOKEN_INVALID);
-
-    await RefreshTokens.revokeById(stored._id);
-    logger.info({ action: "logout", userId: stored.user_id }, "Token revoked");
-  }
-
-  /** Revoke all refresh tokens for the authenticated user (logout from all devices). */
-  static async logoutAll(userId) {
-    await RefreshTokens.revokeAllForUser(userId);
-    logger.info({ action: "logout-all", userId }, "All tokens revoked");
-  }
 }
 
 export default AuthService;

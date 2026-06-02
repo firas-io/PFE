@@ -60,19 +60,6 @@ export interface HabitLog {
   updatedAt: string;
 }
 
-export interface HabitTemplate {
-  _id: string;
-  nom_template: string;
-  description?: string;
-  categorie?: HabitCategorie;
-  priorite?: HabitPriorite;
-  frequence?: HabitFrequence;
-  jours_specifiques?: string[];
-  fois_par_semaine?: number;
-  horaires_cibles?: HoraireCible[];
-  objectif_valeur?: number;
-  objectif_unite?: string;
-}
 
 export interface NoteHistory {
   _id: string;

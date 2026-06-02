@@ -12,7 +12,6 @@ const getHabitById       = (s) => ({ method: "GET",    url: "/habits/:id",      
 const updateHabit        = (s) => ({ method: "PUT",    url: "/habits/:id",                  preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.updateHabit });
 const updateStatus       = (s) => ({ method: "PATCH",  url: "/habits/:id/status",           schema: updateHabitStatusSchema, preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.updateHabitStatus });
 const updateNotes        = (s) => ({ method: "PATCH",  url: "/habits/:id/notes",            preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.updateHabitNotes });
-const getNoteHistory     = (s) => ({ method: "GET",    url: "/habits/:id/notes/history",    preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.getNoteHistory });
 const getStreaks          = (s) => ({ method: "GET",    url: "/habits/:id/streaks",          preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.getStreaks });
 const cloneHabit         = (s) => ({ method: "POST",   url: "/habits/:id/clone",            preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.cloneHabit });
 const activateHabit      = (s) => ({ method: "POST",   url: "/habits/:id/activate",         preHandler: s.auth([s.verifyAccessToken]), handler: HabitsController.activateHabit });
@@ -23,7 +22,7 @@ const deleteHabit        = (s) => ({ method: "DELETE", url: "/habits/:id/hard", 
 
 const routes = [
   createHabit, getAllHabits, getMyHabits, getGlobalHabits, searchHabits,
-  getHabitById, updateHabit, updateStatus, updateNotes, getNoteHistory,
+  getHabitById, updateHabit, updateStatus, updateNotes,
   getStreaks, cloneHabit, activateHabit, updateMySettings, archiveHabit, restoreHabit, deleteHabit,
 ];
 

@@ -14,7 +14,6 @@ import { HabitTable } from './HabitTable';
 import { AddHabitModal } from '../AddHabitModal';
 import { UpdateHabitModal } from '../UpdateHabitModal';
 import { NotesModal } from '../NotesModal';
-import { NoteHistoryModal } from '../NoteHistoryModal';
 import { PersonalizeModal } from '../PersonalizeModal/PersonalizeModal';
 
 export const HabitList = () => {
@@ -46,8 +45,6 @@ export const HabitList = () => {
   const [notesHabit, setNotesHabit] = useState(null);
   const [showNotes, setShowNotes] = useState(false);
 
-  const [noteHistory, setNoteHistory] = useState([]);
-  const [showHistory, setShowHistory] = useState(false);
   const [weeklyCompletionMap, setWeeklyCompletionMap] = useState({});
 
   const [personalizeHabit, setPersonalizeHabit] = useState(null);
@@ -377,17 +374,6 @@ export const HabitList = () => {
     }
   };
 
-  const handleViewHistory = async () => {
-    if (!notesHabit) return;
-    try {
-      const history = await apiFetch(`/habits/${notesHabit._id}/notes/history`);
-      setNoteHistory(history);
-      setShowNotes(false);
-      setShowHistory(true);
-    } catch (err) {
-      toast({ variant: 'error', title: "Erreur d'historique", description: err instanceof Error ? err.message : "Erreur lors du chargement de l'historique" });
-    }
-  };
 
   return (
     <div className="mx-auto w-100 max-w-7xl space-y-6">
@@ -460,18 +446,10 @@ export const HabitList = () => {
           habitNotes={notesHabit?.note ?? ''}
           onClose={() => { setShowNotes(false); setNotesHabit(null); }}
           onSave={handleSaveNotes}
-          onViewHistory={handleViewHistory}
           saving={busy}
         />
       )}
 
-      {canNotes && (
-        <NoteHistoryModal
-          show={showHistory}
-          history={noteHistory}
-          onClose={() => setShowHistory(false)}
-        />
-      )}
 
       {personalizeHabit && (
         <PersonalizeModal

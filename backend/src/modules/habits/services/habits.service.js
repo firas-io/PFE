@@ -2,12 +2,11 @@ import { paginate }           from "@/helpers/pagination.helper.js";
 import { parseSearchQuery }   from "@/helpers/search.helper.js";
 import { Habits }             from "../models/Habit.model.js";
 import { UserHabitSettings }  from "../models/UserHabitSettings.model.js";
-import { HabitNoteHistories } from "../models/HabitNoteHistory.model.js";
 import { HabitLogs }          from "@/modules/habit-logs/models/HabitLog.model.js";
 import { HabitStats }         from "@/modules/habit-stats/models/HabitStats.model.js";
-import { Reminders }          from "@/modules/reminders/models/Reminder.model.js";
 import { OffDays }            from "@/modules/off-days/models/OffDay.model.js";
-import { Users }              from "@/modules/users/models/User.model.js";
+import { Users }                    from "@/modules/users/models/User.model.js";
+import { UserCategoryPreferences }  from "@/modules/users/models/UserCategoryPreference.model.js";
 import { withCanonicalUserFields } from "@/modules/users/utils/user-fields.js";
 import { AppError }           from "@/core/errors.js";
 import logger                 from "@/utils/logger.util.js";
@@ -167,16 +166,13 @@ class HabitsService {
           );
         }
         habitPayload.categorie = validSlug;
-        const userDoc = await Users.findById(userId);
-        const userCategories = userDoc?.categories ?? [];
-        const alreadyHas = userCategories.some(
-          (c) => String(c).toLowerCase() === String(validSlug).toLowerCase()
-        );
+        const alreadyHas = await UserCategoryPreferences.findByUserAndSlug(userId, validSlug);
         if (!alreadyHas) {
-          await Users.updateOne(
-            { _id: userId },
-            { $addToSet: { categories: validSlug } }
-          );
+          await UserCategoryPreferences.insertOne({
+            user_id:       userId,
+            category_slug: validSlug,
+            created_at:    new Date(),
+          });
         }
       }
     }
@@ -273,19 +269,18 @@ class HabitsService {
         : {};
 
     // Exclude global habits the user has personally archived via their UserHabitSettings
-    const [userSettings, userDoc] = await Promise.all([
+    const isRegularUser = reqUser
+      ? !((reqUser.permissions || []).includes("ALL") || (reqUser.permissions || []).includes("HABITS_MANAGE") || (reqUser.permissions || []).includes("HABITS_VIEW"))
+      : true;
+
+    const [userSettings, userCategories] = await Promise.all([
       UserHabitSettings.findAllByUser(userId),
-      Users.findById(userId),
+      isRegularUser ? UserCategoryPreferences.getSlugsForUser(userId) : Promise.resolve([]),
     ]);
     const personallyArchivedIds = userSettings
       .filter(s => s.statut_perso === "archive")
       .map(s => String(s.habit_id));
 
-    // For regular users, restrict global habits to their selected categories only
-    const isRegularUser = reqUser
-      ? !((reqUser.permissions || []).includes("ALL") || (reqUser.permissions || []).includes("HABITS_MANAGE") || (reqUser.permissions || []).includes("HABITS_VIEW"))
-      : true;
-    const userCategories = userDoc?.categories ?? [];
     const categoryClause = (isRegularUser && userCategories.length > 0)
       ? { categorie: { $in: userCategories } }
       : {};
@@ -388,31 +383,7 @@ class HabitsService {
       throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
 
     const newNote = body?.note !== undefined ? body.note : undefined;
-    const oldNote = habit.note || null;
-
-    if (oldNote !== newNote) {
-      await HabitNoteHistories.insertOne({
-        habit_id: id, user_id: userId,
-        old_note: oldNote, new_note: newNote,
-        action: oldNote ? "updated" : "created",
-      });
-    }
-
     return Habits.updateOne({ _id: id }, { $set: { note: newNote } });
-  }
-
-  static async getNoteHistory(id, userId, permissions, userRole) {
-    if (userRole?.toLowerCase() === "manager")
-      throw new AppError("Les managers ne peuvent pas accéder à l'historique des notes.", 403, ErrorsCodes.ACCESS_DENIED);
-
-    const habit = await Habits.findById(id);
-    if (!habit) throw new AppError(ErrorMessages[ErrorsCodes.NOT_FOUND], 404, ErrorsCodes.NOT_FOUND);
-
-    const isAdmin = permissions.includes("HABITS_MANAGE") || permissions.includes("ALL");
-    if (habit.user_id !== userId && !isAdmin && habit.visible_pour_tous !== true)
-      throw new AppError(ErrorMessages[ErrorsCodes.ACCESS_DENIED], 403, ErrorsCodes.ACCESS_DENIED);
-
-    return HabitNoteHistories.find({ habit_id: id }, { sort: { createdAt: -1 } });
   }
 
   static async cloneHabit(id, body, userId, req) {
@@ -490,13 +461,11 @@ class HabitsService {
     // MongoDB standalone — no transactions. Strategy: if a child step fails,
     // abort immediately and preserve the parent. If the parent fails after all
     // children are deleted, log a warn and surface a HABIT-005 error.
-    const counts = { logs: 0, stats: 0, notes: 0, reminders: 0 };
+    const counts = { logs: 0, stats: 0 };
 
     const STEPS = [
       { name: "habit_logs",           run: () => HabitLogs.deleteMany({ habit_id: id }),          key: "logs" },
       { name: "habit_stats",          run: () => HabitStats.deleteMany({ habit_id: id }),         key: "stats" },
-      { name: "habit_note_histories", run: () => HabitNoteHistories.deleteMany({ habit_id: id }), key: "notes" },
-      { name: "reminders",            run: () => Reminders.deleteMany({ habit_id: id }),           key: "reminders" },
     ];
 
     for (const step of STEPS) {

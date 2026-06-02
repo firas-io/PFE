@@ -2,7 +2,6 @@ import Fastify    from "fastify";
 import cors       from "@fastify/cors";
 import rateLimit  from "@fastify/rate-limit";
 import { setupAdmin }          from "@/fixtures/setup-admin.js";
-import { setupHabitTemplates } from "@/fixtures/setup-habit-templates.js";
 import { setupIndexes }        from "@/fixtures/setup-indexes.js";
 import { setupCategories }     from "@/fixtures/setup-categories.js";
 import { migrateUsersEnglishFields } from "@/fixtures/migrate-users-english-fields.js";
@@ -10,7 +9,8 @@ import { migrateUserIdsToUuid }          from "@/fixtures/migrate-user-ids-to-uu
 import { migrateLegacyEntityIdsToUuid } from "@/fixtures/migrate-legacy-entity-ids-to-uuid.js";
 import { migrateHabitsGlobalFields }    from "@/fixtures/migrate-habits-global-fields.js";
 import { migrateTicketsTypeField }      from "@/fixtures/migrate-tickets-type-field.js";
-import { migrateRolesPermissions }      from "@/fixtures/migrate-roles-permissions.js";
+import { migrateRolesPermissions }           from "@/fixtures/migrate-roles-permissions.js";
+import { migrateCategoriesToPreferences }    from "@/fixtures/migrate-categories-to-preferences.js";
 import dbPlugin   from "@/plugins/db.plugin.js";
 import authPlugin from "@/plugins/auth.plugin.js";
 import authRoutes          from "@/modules/auth/index.js";
@@ -19,16 +19,11 @@ import rolesRoutes         from "@/modules/roles/index.js";
 import managersRoutes      from "@/modules/managers/index.js";
 import offDaysRoutes       from "@/modules/off-days/index.js";
 import categoryTicketsRoutes from "@/modules/category-tickets/index.js";
-import weeklyRecapRoutes   from "@/modules/weekly-recap/index.js";
-import adminStatsRoutes    from "@/modules/admin-stats/index.js";
 import weeklyStatsRoutes   from "@/modules/weekly-stats/index.js";
 import habitsRoutes        from "@/modules/habits/index.js";
-import habitTemplatesRoutes from "@/modules/habit-templates/index.js";
 import habitLogsRoutes     from "@/modules/habit-logs/index.js";
 import habitStatsRoutes    from "@/modules/habit-stats/index.js";
 import progressRoutes      from "@/modules/progress/index.js";
-import remindersRoutes     from "@/modules/reminders/index.js";
-import sessionsRoutes      from "@/modules/sessions/index.js";
 import onboardingRoutes    from "@/modules/onboarding/index.js";
 import categoriesRoutes    from "@/modules/categories/index.js";
 
@@ -130,9 +125,9 @@ export async function buildApp() {
     await migrateHabitsGlobalFields();
     await migrateTicketsTypeField();
     await migrateRolesPermissions();
+    await migrateCategoriesToPreferences();
     await setupAdmin(fastify);
     await setupCategories();
-    await setupHabitTemplates(fastify);
     await setupIndexes();
   });
 
@@ -146,12 +141,9 @@ export async function buildApp() {
       roles:          "/roles",
       habits:         "/habits",
       categories:     "/categories",
-      habitTemplates: "/habits/templates",
       habitLogs:      "/logs",
       habitStats:     "/stats",
       progress:       "/progress/my | /progress/today | /progress/calendar",
-      reminders:      "/reminders",
-      sessions:       "/sessions",
       onboarding:     "/onboarding"
     }
   }));
@@ -163,17 +155,12 @@ export async function buildApp() {
   fastify.register(managersRoutes);
   fastify.register(offDaysRoutes);
   fastify.register(categoryTicketsRoutes);
-  fastify.register(weeklyRecapRoutes);
-  fastify.register(adminStatsRoutes);
   fastify.register(weeklyStatsRoutes);
   fastify.register(habitsRoutes);
   fastify.register(categoriesRoutes);
-  fastify.register(habitTemplatesRoutes);
   fastify.register(habitLogsRoutes);
   fastify.register(habitStatsRoutes);
   fastify.register(progressRoutes);
-  fastify.register(remindersRoutes);
-  fastify.register(sessionsRoutes);
   fastify.register(onboardingRoutes);
 
   return fastify;

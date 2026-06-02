@@ -3,7 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { API_BASE } from '@/lib/api';
-import { setRefreshToken, setToken, setUser } from '@/lib/auth';
+import { setToken, setUser } from '@/lib/auth';
 
 const HabitFlowLogo = () => (
   <div style={{
@@ -69,7 +69,6 @@ export const LoginForm = () => {
       if (!accessToken) throw new Error('Token manquant dans la réponse du serveur.');
 
       setToken(accessToken);
-      if (data.refreshToken) setRefreshToken(data.refreshToken);
       setUser(data.user ?? null);
 
       const role = (data.user?.role ?? '').toString().toLowerCase();
