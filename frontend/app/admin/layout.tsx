@@ -14,12 +14,10 @@ import {
   IconLayoutSidebarLeftExpand,
   IconLogout,
   IconMessageCircle,
-  IconMoon,
   IconNotes,
   IconProgress,
   IconReportAnalytics,
   IconShieldCheck,
-  IconSun,
   IconTag,
   IconTicket,
   IconUser,
@@ -43,7 +41,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     permissions?: string[];
   } | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [darkMode, setDarkMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
@@ -51,7 +48,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   useEffect(() => {
     const stored = getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; role?: string; permissions?: string[] }>();
     setUser(stored);
-    setDarkMode(window.localStorage.getItem("habitflow_admin_dark_mode") === "true");
     setIsMobile(window.innerWidth < 769);
     if (window.innerWidth < 769) setSidebarOpen(false);
     setMounted(true);
@@ -76,11 +72,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem("habitflow_admin_dark_mode", String(darkMode));
-  }, [darkMode]);
 
   const role = (user?.role ?? "").toLowerCase();
   const isAdmin   = role === "admin";
@@ -141,7 +132,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div className={`admin-shell${sidebarOpen ? "" : " admin-shell--sidebar-collapsed"}${darkMode ? " admin-shell--dark" : ""}`}>
+    <div className={`admin-shell${sidebarOpen ? "" : " admin-shell--sidebar-collapsed"}`}>
       <aside
         className="admin-sidebar"
         style={mobileSidebarStyle}
@@ -283,16 +274,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             </button>
           </div>
           <div className="admin-topbar-user">
-            <button
-              type="button"
-              className="admin-theme-toggle"
-              onClick={() => setDarkMode((v) => !v)}
-              aria-pressed={darkMode}
-              title={darkMode ? "Passer en mode clair" : "Passer en mode sombre"}
-            >
-              {darkMode ? <IconSun size={15} stroke={1.9} /> : <IconMoon size={15} stroke={1.9} />}
-              <span suppressHydrationWarning>{darkMode ? "Clair" : "Sombre"}</span>
-            </button>
             <div style={{ position: "relative" }}>
               <button
                 type="button"

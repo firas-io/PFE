@@ -13,13 +13,11 @@ import {
   IconListDetails,
   IconLogout,
   IconMessageCircle,
-  IconMoon,
   IconNotes,
   IconProgress,
   IconReportAnalytics,
   IconShieldCheck,
   IconShieldLock,
-  IconSun,
   IconTag,
   IconTicket,
   IconUser,
@@ -75,7 +73,6 @@ export const DashboardShell = ({ children }) => {
   const pathname  = usePathname();
   const router    = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [darkMode,    setDarkMode]    = useState(false);
   const [mounted,     setMounted]     = useState(false);
   const [user,        setUser]        = useState(null);
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -83,8 +80,6 @@ export const DashboardShell = ({ children }) => {
   useEffect(() => {
     const stored = getUser();
     setUser(stored);
-    const saved = window.localStorage.getItem('habitflow_dark_mode');
-    if (saved === 'true') setDarkMode(true);
     setMounted(true);
     if (window.innerWidth < 769) setSidebarOpen(false);
 
@@ -104,13 +99,6 @@ export const DashboardShell = ({ children }) => {
     router.push('/login');
   };
 
-  const toggleDark = () => {
-    setDarkMode((v) => {
-      window.localStorage.setItem('habitflow_dark_mode', String(!v));
-      return !v;
-    });
-  };
-
   const isActive = (link) => {
     if (link.exact) return pathname === link.href;
     return pathname.startsWith(link.href);
@@ -128,7 +116,6 @@ export const DashboardShell = ({ children }) => {
     <div className={[
       'user-shell',
       sidebarOpen ? '' : 'user-shell--sidebar-collapsed',
-      darkMode    ? 'user-shell--dark' : '',
     ].filter(Boolean).join(' ')}>
 
       {/* ── Sidebar ─────────────────────────────────────────── */}
@@ -302,17 +289,6 @@ export const DashboardShell = ({ children }) => {
 
           {/* Right side */}
           <div className="user-topbar-user">
-            {/* Dark mode */}
-            <button
-              type="button"
-              className="user-theme-toggle"
-              onClick={toggleDark}
-              aria-pressed={darkMode}
-              title={darkMode ? 'Mode clair' : 'Mode sombre'}
-            >
-              {darkMode ? <IconSun size={15} stroke={1.9}/> : <IconMoon size={15} stroke={1.9}/>}
-              <span suppressHydrationWarning>{darkMode ? 'Clair' : 'Sombre'}</span>
-            </button>
 
             {/* Avatar */}
             <div style={{ position: 'relative' }}>
