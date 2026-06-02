@@ -41,7 +41,7 @@ export const AddHabitModal = ({ show, onHide, onSuccess }) => {
         return;
       }
     }
-    if (currentStep === 1) {
+    if (currentStep === 0) {
       if (!form.categorie) {
         setStepError('Veuillez sélectionner une catégorie');
         return;
