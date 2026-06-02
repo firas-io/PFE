@@ -88,10 +88,10 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   // Mobile nav — fixe par rôle
   const mobileNav = isAdmin ? [
-    { href: "/admin",            label: "Dashboard",  icon: IconChartBar    },
-    { href: "/admin/habits",     label: "Habitudes",  icon: IconProgress    },
-    { href: "/admin/stats",      label: "Stats",      icon: IconReportAnalytics },
-    { href: "/admin/tickets",    label: "Tickets",    icon: IconTicket      },
+    { href: "/admin",            label: "Dashboard",  icon: IconChartBar },
+    { href: "/admin/habits",     label: "Habitudes",  icon: IconProgress },
+    { href: "/admin/tickets",    label: "Tickets",    icon: IconTicket   },
+    { href: "/admin/roles",      label: "Permissions", icon: IconShieldCheck },
   ] : isManager ? [
     { href: "/dashboard/home",   label: "Mon bord",   icon: IconHome        },
     { href: "/admin/my-users",   label: "Équipe",     icon: IconUsers       },
@@ -190,10 +190,6 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
               <Link href="/admin/off-days" className={`admin-nav-link ${pathname.startsWith("/admin/off-days") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
                 <IconCalendarOff size={18} stroke={1.75} aria-hidden />
                 Jours off
-              </Link>
-              <Link href="/admin/stats" className={`admin-nav-link ${pathname.startsWith("/admin/stats") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
-                <IconReportAnalytics size={18} stroke={1.75} aria-hidden />
-                Statistiques
               </Link>
               <Link href="/admin/roles" className={`admin-nav-link ${pathname.startsWith("/admin/roles") ? "active" : ""}`} onClick={closeSidebarOnMobile}>
                 <IconShieldCheck size={18} stroke={1.75} aria-hidden />
