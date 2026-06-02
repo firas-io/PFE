@@ -1,13 +1,13 @@
 import WeeklyStatsController from "../controllers/weekly-stats.controller.js";
 
 export default async function weeklyStatsRoutes(fastify) {
-  // Admin only — requires ADMIN_STATS_VIEW (or ALL)
+  // Admin only
   fastify.route({
     method:     "GET",
     url:        "/stats/admin",
     preHandler: fastify.auth([
       fastify.verifyAccessToken,
-      fastify.verifyAbility([{ action: "read", subject: "AdminStats" }]),
+      fastify.verifyAbility([{ action: "read", subject: "HabitStats" }]),
     ]),
     handler: WeeklyStatsController.getAdminStats,
   });
