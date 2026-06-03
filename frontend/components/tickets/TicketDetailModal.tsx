@@ -37,6 +37,7 @@ export function TicketDetailModal({ ticket, open, onClose, isAdmin, footer }: Ti
       subtitle={`#${ticket._id.slice(-6).toUpperCase()} · ${STATUS_LABEL[ticket.status]}`}
       onClose={onClose}
       size="lg"
+      scrollable
       footer={footer}
     >
       <div className="tkt-detail-body">

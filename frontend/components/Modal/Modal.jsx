@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 
-export const Modal = ({ open, title, subtitle, children, onClose, footer, size, scrollable }) => {
+export const Modal = ({ open, title, subtitle, children, onClose, footer, size, scrollable = true }) => {
   useEffect(() => {
     if (!open) return;
     const previousOverflow = document.body.style.overflow;
