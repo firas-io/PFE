@@ -17,7 +17,7 @@ export function CategoryDonutChart({ distribution = [] }) {
       ) : (
         <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16 }}>
           <div style={{ position: 'relative', width: '100%', maxWidth: 220, height: 220, margin: '0 auto' }}>
-          <ResponsiveContainer width="100%" height={220} minWidth={0}>
+            <ResponsiveContainer width="100%" height={220} minWidth={0}>
               <PieChart>
                 <Pie
                   data={data}
