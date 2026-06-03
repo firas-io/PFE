@@ -56,6 +56,7 @@ function buildKpiCards(stats, role) {
       { label: 'ACTIFS SUR LA PÉRIODE', value: String(stats.active_users_this_week ?? 0), sub: 'avec au moins un log', color: '#7C3AED' },
       { label: 'HABITUDES', value: String(stats.total_habits ?? 0), sub: `+${stats.new_habits_this_week ?? 0} nouvelles`, color: '#059669' },
       { label: 'TAUX DE COMPLÉTION', value: `${stats.completion_rate ?? 0}%`, sub: rateLabel(stats.completion_rate ?? 0), color: rateColor(stats.completion_rate ?? 0) },
+      { label: 'TICKETS', value: String(stats.total_tickets ?? 0), sub: `${stats.pending_tickets ?? 0} en attente`, color: '#0EA5E9' },
     ];
   }
 

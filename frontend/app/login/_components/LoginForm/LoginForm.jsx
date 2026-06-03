@@ -77,7 +77,12 @@ export const LoginForm = () => {
         router.push('/onboarding');
         return;
       }
-      router.push(role === 'admin' || role === 'manager' ? '/admin' : '/dashboard/home');
+      // Manager → dashboard perso
+router.push(
+  role === 'admin' ? '/admin/habits'
+  : role === 'manager' ? '/dashboard/home'
+  : '/dashboard/home'
+);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erreur de connexion');
     } finally {

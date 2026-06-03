@@ -1,6 +1,7 @@
-import { Users }     from "@/modules/users/models/User.model.js";
-import { Habits }    from "@/modules/habits/models/Habit.model.js";
-import { HabitLogs } from "@/modules/habit-logs/models/HabitLog.model.js";
+import { Users }           from "@/modules/users/models/User.model.js";
+import { Habits }          from "@/modules/habits/models/Habit.model.js";
+import { HabitLogs }       from "@/modules/habit-logs/models/HabitLog.model.js";
+import { CategoryTickets } from "@/modules/category-tickets/models/CategoryTicket.model.js";
 import { enrichChartPayload, _userDisplayName } from "../helpers/charts.helpers.js";
 
 function _startOfDay(date) { const d = new Date(date); d.setHours(0, 0, 0, 0);     return d; }
@@ -140,7 +141,7 @@ class WeeklyStatsService {
   static async getAdminStats({ period, dateFrom, dateTo } = {}) {
     const { periodStart, periodEnd, period: resolvedPeriod } = _resolvePeriod(period, dateFrom, dateTo);
 
-    const [totalUsers, periodLogs, allHabits, activeUsers] = await Promise.all([
+    const [totalUsers, periodLogs, allHabits, activeUsers, totalTickets, pendingTickets] = await Promise.all([
       Users.count({ isActive: true, is_system: { $ne: true } }),
       HabitLogs.find(
         { date: { $gte: periodStart, $lte: periodEnd } },
@@ -148,6 +149,8 @@ class WeeklyStatsService {
       ),
       Habits.find({}, { projection: { _id: 1, nom: 1, user_id: 1, categorie: 1, statut: 1, date_debut: 1, createdAt: 1 } }),
       Users.find({ isActive: true, is_system: { $ne: true }, anonymized: { $ne: true } }),
+      CategoryTickets.count({}),
+      CategoryTickets.count({ status: "pending" }),
     ]);
 
     const totalHabits    = allHabits.length;
@@ -180,6 +183,8 @@ class WeeklyStatsService {
       completion_rate:        completionRate,
       daily_progress:         dailyProgress,
       top_categories:         topCategories,
+      total_tickets:          totalTickets,
+      pending_tickets:        pendingTickets,
     };
 
     return enrichChartPayload(base, {

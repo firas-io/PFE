@@ -95,6 +95,12 @@ function AdminView({ sessionUser }) {
       sub:   'Semaine en cours (lundi-dimanche) — global plateforme',
       color: (stats.completion_rate ?? 0) >= 70 ? '#059669' : (stats.completion_rate ?? 0) >= 40 ? '#D97706' : '#EF4444',
     },
+    {
+      label: 'TICKETS',
+      value: String(stats.total_tickets ?? 0),
+      sub:   `${stats.pending_tickets ?? 0} en attente`,
+      color: '#0EA5E9',
+    },
   ] : [];
 
   return (
@@ -131,10 +137,10 @@ function AdminView({ sessionUser }) {
       {!loading && stats && (stats.total_users ?? 0) === 0 && (
         <div style={{ ...CARD, textAlign: 'center', padding: '48px 20px' }}>
           <p style={{ fontSize: 16, fontWeight: 700, color: '#1E1B4B', margin: '0 0 6px' }}>Aucun compte actif</p>
-          <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Créez des utilisateurs ou des managers pour voir les statistiques.</p>
+          <p style={{ fontSize: 13, color: '#64748B', margin: 0 }}>Créez des utilisateurs ou des managers pour voir les statistiques détaillées.</p>
         </div>
       )}
-      {!loading && stats && (stats.total_users ?? 0) > 0 && (
+      {!loading && stats && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
             {kpiCards.map((k, i) => (
@@ -147,34 +153,40 @@ function AdminView({ sessionUser }) {
               </motion.div>
             ))}
           </div>
-          <StatsChartsGrid
-            stats={stats}
-            showTeamCharts={canViewTeamAnalytics(sessionUser)}
-            gradientId="adminGrad"
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, maxWidth: 420 }}>
-            <div style={{ borderRadius: 16, padding: '20px', background: 'linear-gradient(135deg, #4338CA, #7C3AED)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
-              <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-                <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>RÉSUMÉ PLATEFORME</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
-                {[
-                  { label: 'Comptes actifs', value: String(stats.active_users_this_week ?? 0) },
-                  { label: 'Comptes totaux', value: String(stats.total_users ?? 0) },
-                  { label: 'Habitudes totales', value: String(stats.total_habits ?? 0) },
-                  { label: 'Logs cette semaine', value: String(stats.total_logs_this_week ?? 0) },
-                  { label: 'Taux de complétion', value: `${stats.completion_rate ?? 0}%` },
-                  { label: 'Top catégorie', value: topCategories[0] ? (CATEGORY_LABELS[topCategories[0].category] || topCategories[0].category) : '—' },
-                ].map(item => (
-                  <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <span style={{ fontSize: 13, opacity: 0.85 }}>{item.label}</span>
-                    <span style={{ fontSize: 14, fontWeight: 800 }}>{item.value}</span>
+          {(stats.total_users ?? 0) > 0 && (
+            <>
+              <StatsChartsGrid
+                stats={stats}
+                showTeamCharts={canViewTeamAnalytics(sessionUser)}
+                gradientId="adminGrad"
+              />
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 16, maxWidth: 420 }}>
+                <div style={{ borderRadius: 16, padding: '20px', background: 'linear-gradient(135deg, #4338CA, #7C3AED)', color: '#fff', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }}/>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', opacity: 0.8 }}>RÉSUMÉ PLATEFORME</span>
                   </div>
-                ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
+                    {[
+                      { label: 'Comptes actifs', value: String(stats.active_users_this_week ?? 0) },
+                      { label: 'Comptes totaux', value: String(stats.total_users ?? 0) },
+                      { label: 'Habitudes totales', value: String(stats.total_habits ?? 0) },
+                      { label: 'Logs cette semaine', value: String(stats.total_logs_this_week ?? 0) },
+                      { label: 'Taux de complétion', value: `${stats.completion_rate ?? 0}%` },
+                      { label: 'Tickets (total)', value: String(stats.total_tickets ?? 0) },
+                      { label: 'Tickets en attente', value: String(stats.pending_tickets ?? 0) },
+                      { label: 'Top catégorie', value: topCategories[0] ? (CATEGORY_LABELS[topCategories[0].category] || topCategories[0].category) : '—' },
+                    ].map(item => (
+                      <div key={item.label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: 13, opacity: 0.85 }}>{item.label}</span>
+                        <span style={{ fontSize: 14, fontWeight: 800 }}>{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
         </>
       )}
     </div>
