@@ -9,6 +9,8 @@ import { userFirstName } from "@/lib/userDisplay";
 import { useToast } from "@/components/Toast";
 import { HabitItem, type HabitProgressItem } from "../_components/HabitItem";
 import DateFilter, { type DateFilterValue } from "@/components/DateFilter";
+import { CompletionEvolutionChart } from "@/app/dashboard/stats/_components/charts/CompletionEvolutionChart";
+import { mapDailyChart } from "@/app/dashboard/stats/_components/charts/_chartTheme";
 
 interface GlobalHabit {
   _id: string;
@@ -43,12 +45,28 @@ interface ProgressData {
   habits_progress: HabitProgressItem[];
 }
 
+interface StatsChartData {
+  daily_progress?: { label: string; rate: number; completed: number; total: number }[];
+  completion_average?: number;
+}
+
+function statsQuery(range?: DateFilterValue | null) {
+  const params = new URLSearchParams();
+  if (range?.period)   params.set("period", range.period);
+  if (range?.dateFrom) params.set("dateFrom", range.dateFrom);
+  if (range?.dateTo)   params.set("dateTo", range.dateTo);
+  const q = params.toString();
+  return q ? `?${q}` : "";
+}
+
+function statsEndpointForRole(role: string) {
+  return role === "manager" ? "/stats/manager" : "/stats/user";
+}
+
 interface TodayData {
   habits: { _id: string; nom: string; statut: string }[];
   logs: { _id: string; habit_id: string; statut: string }[];
 }
-
-const DAYS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
 const MONTHS = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
 function MiniCalendar() {
@@ -100,10 +118,12 @@ function MiniCalendar() {
 export default function DashboardHome() {
   const { toast } = useToast();
   const [progress, setProgress] = useState<ProgressData | null>(null);
+  const [chartStats, setChartStats] = useState<StatsChartData | null>(null);
   const [today,    setToday]    = useState<TodayData | null>(null);
   const [loading,  setLoading]  = useState(true);
   const [togglingHabitId, setTogglingHabitId] = useState<string | null>(null);
-  const [user, setUser] = useState<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; permissions?: string[] } | null>(null);
+  const [user, setUser] = useState<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; role?: string; permissions?: string[] } | null>(null);
+
   const loadProgress = (range?: DateFilterValue | null) => {
     const params = new URLSearchParams();
     if (range?.dateFrom) params.set('dateFrom', range.dateFrom);
@@ -112,20 +132,33 @@ export default function DashboardHome() {
     return apiFetch<ProgressData>(`/progress/my${query}`);
   };
 
+  const loadChartStats = (range?: DateFilterValue | null, role?: string) => {
+    const r = (role ?? user?.role ?? getUser()?.role ?? "utilisateur").toString().toLowerCase();
+    return apiFetch<StatsChartData>(`${statsEndpointForRole(r)}${statsQuery(range)}`);
+  };
+
   useEffect(() => {
-    const stored = getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; permissions?: string[] }>();
+    const stored = getUser<{ firstName?: string; lastName?: string; prenom?: string; nom?: string; role?: string; permissions?: string[] }>();
     setUser(stored);
+    const role = (stored?.role ?? "utilisateur").toString().toLowerCase();
     Promise.all([
       loadProgress(),
+      loadChartStats(undefined, role),
       apiFetch<TodayData>("/progress/today"),
     ])
-      .then(([p, t]) => { setProgress(p); setToday(t); })
+      .then(([p, s, t]) => { setProgress(p); setChartStats(s); setToday(t); })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
 
   function handleDateChange(range: DateFilterValue) {
-    loadProgress(range).then(setProgress).catch(console.error);
+    const role = (user?.role ?? getUser()?.role ?? "utilisateur").toString().toLowerCase();
+    Promise.all([
+      loadProgress(range),
+      loadChartStats(range, role),
+    ])
+      .then(([p, s]) => { setProgress(p); setChartStats(s); })
+      .catch(console.error);
   }
 
   const todayHabits = useMemo<HabitProgressItem[]>(() => {
@@ -144,6 +177,11 @@ export default function DashboardHome() {
 
   const firstName = userFirstName(user) || "vous";
   const todayLabel = new Date().toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" });
+  const evolutionChartData = useMemo(
+    () => mapDailyChart(chartStats?.daily_progress),
+    [chartStats?.daily_progress]
+  );
+  const evolutionAverage = chartStats?.completion_average ?? 0;
 
   const handleToggle = async (habitId: string) => {
     if (!today || togglingHabitId) return;
@@ -273,6 +311,11 @@ export default function DashboardHome() {
       {/* ── Date filter ─────────────────────────────────────── */}
       <DateFilter onChange={handleDateChange} />
 
+      <CompletionEvolutionChart
+        data={evolutionChartData}
+        average={evolutionAverage}
+        gradientId={((user?.role ?? "").toString().toLowerCase() === "manager") ? "homeTeamGrad" : "homeUserGrad"}
+      />
 
       {/* ── Content grid ────────────────────────────────────── */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 24, alignItems: 'start' }}>
